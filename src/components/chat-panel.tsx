@@ -6,7 +6,8 @@ import { SkillCallCard } from "@/components/SkillCallCard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { generateSystemPrompt, ROLE_META, roleLabel } from "@/lib/agents";
-import { createSkillCall, executeSkill } from "@/lib/bossnugrok/skills";
+import { executeSkill } from "@/lib/bossnugrok/skills";
+import { isExplicitModeSwitch, runAutoTools, toolContextForModel } from "@/lib/auto-tools";
 import type { SkillCall } from "@/lib/bossnugrok/skills/skill-types";
 import { COPY } from "@/lib/copy";
 import { chatGrok } from "@/lib/grok";
@@ -33,7 +34,7 @@ function routeWorkspaceCommand(command: string, setWorkspaceMode: (mode: "comman
   const route = routes.find((item) => item.match.test(value));
   if (!route) return null;
   setWorkspaceMode(route.mode);
-  return `เปิด ${route.label} แล้ว — ใช้แชทนี้สั่งงานต่อได้ บอทจะเรียกใช้เครื่องมือจำลองที่เกี่ยวข้องให้อัตโนมัติ`;
+  return `เปิด ${route.label} แล้ว — กลับมาคุยต่อในแชทได้เสมอ`;
 }
 
 async function readFile(file: File): Promise<LocalFile> {
@@ -141,109 +142,140 @@ export function ChatPanel() {
     setFiles([]);
     setBusy(true);
     const assistantId = uid("msg");
-    if (!approved && !needsApproval(payload)) {
-      const routed = routeWorkspaceCommand(payload, setWorkspaceMode);
-      if (routed) {
-        appendMessage(id, { id: assistantId, role: "assistant", content: routed, createdAt: Date.now(), model: "workspace-router" });
-        setBusy(false);
-        return;
-      }
 
-      const skillSeed = createSkillCall(payload);
-      if (skillSeed) {
-        if (skillSeed.status === "pending") {
+    if (!approved && !needsApproval(payload)) {
+      // Leave this chat ONLY when user explicitly opens another room
+      if (isExplicitModeSwitch(payload)) {
+        const routed = routeWorkspaceCommand(payload, setWorkspaceMode);
+        if (routed) {
           appendMessage(id, {
             id: assistantId,
             role: "assistant",
-            content:
-              language === "th"
-                ? `ต้องการใช้เครื่องมือ **${skillSeed.skillId}** — กดอนุญาตด้านล่าง`
-                : `Tool **${skillSeed.skillId}** needs approval — confirm below`,
+            content: routed,
             createdAt: Date.now(),
-            model: `skill:${skillSeed.skillId}`,
-            skillCall: {
-              id: skillSeed.id,
-              skillId: skillSeed.skillId,
-              status: "pending",
-              args: skillSeed.args,
-            },
+            model: "workspace-router",
           });
           setBusy(false);
           return;
         }
-
-        appendMessage(id, {
-          id: assistantId,
-          role: "assistant",
-          content:
-            language === "th"
-              ? `กำลังใช้เครื่องมือ **${skillSeed.skillId}**…`
-              : `Running tool **${skillSeed.skillId}**…`,
-          createdAt: Date.now(),
-          model: `skill:${skillSeed.skillId}`,
-          skillCall: {
-            id: skillSeed.id,
-            skillId: skillSeed.skillId,
-            status: "running",
-            args: skillSeed.args,
-            streamOutput: "",
-          },
-        });
-
-        try {
-          const updated = await executeSkill({ ...skillSeed, status: "running" }, (chunk) => {
-            const prev = useBossStore.getState().conversations.find((c) => c.id === id);
-            const msg = prev?.messages.find((m) => m.id === assistantId);
-            const so = (msg?.skillCall?.streamOutput ?? "") + chunk;
-            patchMessage(id, assistantId, {
-              skillCall: {
-                id: skillSeed.id,
-                skillId: skillSeed.skillId,
-                status: "running",
-                args: skillSeed.args,
-                streamOutput: so,
-              },
-            });
-          });
-          const summary =
-            updated.status === "done"
-              ? language === "th"
-                ? `เครื่องมือ **${updated.skillId}** เสร็จแล้ว${updated.duration != null ? ` (${updated.duration}ms)` : ""}`
-                : `Tool **${updated.skillId}** finished${updated.duration != null ? ` (${updated.duration}ms)` : ""}`
-              : language === "th"
-                ? `เครื่องมือ **${updated.skillId}** ผิดพลาด: ${updated.error ?? ""}`
-                : `Tool **${updated.skillId}** failed: ${updated.error ?? ""}`;
-          patchMessage(id, assistantId, {
-            content: summary,
-            model: `skill:${updated.skillId}`,
-            skillCall: {
-              id: updated.id,
-              skillId: updated.skillId,
-              status: updated.status,
-              args: updated.args,
-              streamOutput: updated.streamOutput,
-              error: updated.error,
-              duration: updated.duration,
-            },
-          });
-        } catch (err) {
-          const raw = err instanceof Error ? err.message : String(err);
-          patchMessage(id, assistantId, {
-            content: raw,
-            skillCall: {
-              id: skillSeed.id,
-              skillId: skillSeed.skillId,
-              status: "error",
-              args: skillSeed.args,
-              error: raw,
-            },
-          });
-        } finally {
-          setBusy(false);
-        }
-        return;
       }
+
+      // Same room: auto tools → model answer in one bubble
+      appendMessage(id, {
+        id: assistantId,
+        role: "assistant",
+        content: language === "th" ? "กำลังคิด…" : "Thinking…",
+        createdAt: Date.now(),
+      });
+
+      const toolPack = await runAutoTools(payload, (chunk) => {
+        const prev = useBossStore.getState().conversations.find((c) => c.id === id);
+        const msg = prev?.messages.find((m) => m.id === assistantId);
+        const so = (msg?.skillCall?.streamOutput ?? "") + chunk;
+        if (so) {
+          patchMessage(id, assistantId, {
+            skillCall: {
+              id: msg?.skillCall?.id ?? `auto_${Date.now().toString(36)}`,
+              skillId: (msg?.skillCall?.skillId as SkillCall["skillId"]) ?? "web-search",
+              status: "running",
+              args: msg?.skillCall?.args ?? { query: payload },
+              streamOutput: so,
+            },
+          });
+        }
+      });
+
+      const toolCtx = toolContextForModel(toolPack, language === "th" ? "th" : "en");
+
+      try {
+        const history = (useBossStore.getState().conversations.find((c) => c.id === id)?.messages ?? [])
+          .filter((m) => m.content.length > 0)
+          .slice(-16)
+          .map((m) => ({ role: m.role, content: m.content }));
+
+        let system = generateSystemPrompt(agent, language);
+        if (toolCtx) system = `${system}\n\n${toolCtx}`;
+
+        const modelHistory = toolCtx
+          ? [
+              ...history,
+              {
+                role: "user" as const,
+                content:
+                  language === "th"
+                    ? `จากข้อมูลเครื่องมือด้านบน ตอบคำถามนี้ให้จบในห้องนี้ (อย่าบอกว่าเข้าเน็ตไม่ได้): ${payload}`
+                    : `Using tool data above, answer fully in this same chat: ${payload}`,
+              },
+            ]
+          : history;
+
+        const skillPatch = toolPack.skillCall
+          ? {
+              id: toolPack.skillCall.id,
+              skillId: toolPack.skillCall.skillId,
+              status: toolPack.skillCall.status as "done" | "running" | "error",
+              args: toolPack.skillCall.args,
+              streamOutput: toolPack.skillCall.streamOutput,
+              error: toolPack.skillCall.error,
+              duration: toolPack.skillCall.duration,
+            }
+          : undefined;
+
+        if (isXaiModel(modelMode)) {
+          const result = await chatGrok({ data: { messages: modelHistory, system } });
+          if (!result.ok) throw new Error(result.error);
+          const full = result.text;
+          const step = Math.max(12, Math.floor(full.length / 40));
+          for (let i = 0; i < full.length; i += step) {
+            const shown = full.slice(0, Math.min(full.length, i + step));
+            patchMessage(id, assistantId, { content: shown, model: result.model, skillCall: skillPatch });
+            await new Promise((r) => setTimeout(r, 16));
+          }
+          patchMessage(id, assistantId, {
+            content: full,
+            model: result.model,
+            skillCall: skillPatch ? { ...skillPatch, status: "done" } : undefined,
+          });
+          setLastModelId(result.model);
+        } else {
+          const result = await chatWithPuter({
+            messages: [{ role: "system", content: system }, ...modelHistory],
+            pinnedModel: modelMode,
+            preferTestMode: false,
+            onDelta: (next) => patchMessage(id, assistantId, { content: next, skillCall: skillPatch }),
+          });
+          patchMessage(id, assistantId, {
+            content: result.text,
+            model: result.model.id,
+            skillCall: skillPatch ? { ...skillPatch, status: "done" } : undefined,
+          });
+          setLastModelId(result.model.id);
+        }
+      } catch (err) {
+        const raw = err instanceof Error ? err.message : t.noModels;
+        if (toolPack.toolText) {
+          patchMessage(id, assistantId, {
+            content: toolPack.toolText,
+            skillCall: toolPack.skillCall
+              ? {
+                  id: toolPack.skillCall.id,
+                  skillId: toolPack.skillCall.skillId,
+                  status: "done",
+                  args: toolPack.skillCall.args,
+                  streamOutput: toolPack.skillCall.streamOutput,
+                }
+              : undefined,
+          });
+        } else {
+          const quota = /quota|usage-limited|usage limit/i.test(raw);
+          patchMessage(id, assistantId, { content: quota ? t.quota : raw });
+        }
+      } finally {
+        setBusy(false);
+      }
+      return;
     }
+
     if (needsApproval(payload) && !approved) {
       const request = `คำสั่งนี้อาจเปลี่ยนแปลงระบบ — ยืนยันด้านล่างก่อนดำเนินการ`;
       appendMessage(id, { id: assistantId, role: "assistant", content: request, createdAt: Date.now() });
@@ -251,6 +283,7 @@ export function ChatPanel() {
       setBusy(false);
       return;
     }
+
     appendMessage(id, { id: assistantId, role: "assistant", content: "", createdAt: Date.now() });
     try {
       const history = (useBossStore.getState().conversations.find((c) => c.id === id)?.messages ?? [])
