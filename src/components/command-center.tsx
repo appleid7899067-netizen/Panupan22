@@ -55,7 +55,7 @@ export function CommandCenter() {
             {syncLabel ? ` · ${syncLabel}` : ""}
           </p>
         </div>
-        <div className="hidden rounded-full border border-border p-0.5 sm:flex">
+        <div className="flex max-w-[52vw] items-center gap-0.5 overflow-x-auto rounded-full border border-border p-0.5 sm:max-w-none">
           {MODES.map((m) => (
             <button
               key={m.id}
@@ -125,7 +125,7 @@ export function CommandCenter() {
         </div>
       </header>
 
-      <div className="flex gap-1 border-b border-border px-3 py-2 sm:hidden">
+      <div className="hidden gap-1 border-b border-border px-3 py-2 sm:hidden">
         {MODES.map((m) => (
           <button
             key={m.id}
