@@ -19,6 +19,22 @@ function needsApproval(command: string) {
   return /github|git push|commit|deploy|vercel|production|แก้(ไข)?ไฟล์|เพิ่มฟีเจอร์|ลบไฟล์|ส่งขึ้น|push|publish/i.test(command);
 }
 
+function routeWorkspaceCommand(command: string, setWorkspaceMode: (mode: "command" | "create" | "sandbox" | "live" | "terminal" | "super" | "manus") => void) {
+  const value = command.toLowerCase();
+  const routes = [
+    { match: /manus|browser\s*\/?\s*os|เบราว์เซอร์|บราวเซอร์|จำลองระบบ/, mode: "manus" as const, label: "Manus Hub · Browser / OS Mock Simulation" },
+    { match: /sandbox|prompt\s*lab|พรอมต์|แซนด์บ็อกซ์/, mode: "sandbox" as const, label: "Sandbox · Prompt Lab และ JavaScript Sandbox" },
+    { match: /live\s*stream|สตรีมสด|telemetry|ไลฟ์/, mode: "live" as const, label: "Live Stream · telemetry และ event log" },
+    { match: /terminal|เทอร์มินอล|คำสั่ง shell/, mode: "terminal" as const, label: "Terminal · browser-safe command simulator" },
+    { match: /groksuper|grok\s*super/, mode: "super" as const, label: "GrokSuper · test lab" },
+    { match: /สร้างภาพ|generate image|image generation|create mode/, mode: "create" as const, label: "Create · image generation" },
+  ];
+  const route = routes.find((item) => item.match.test(value));
+  if (!route) return null;
+  setWorkspaceMode(route.mode);
+  return `เปิด ${route.label} แล้ว — ใช้แชทนี้สั่งงานต่อได้ บอทจะเรียกใช้เครื่องมือจำลองที่เกี่ยวข้องให้อัตโนมัติ`;
+}
+
 async function readFile(file: File): Promise<LocalFile> {
   const mime = file.type || "application/octet-stream";
   if (mime.startsWith("image/")) {
@@ -124,6 +140,14 @@ export function ChatPanel() {
     setFiles([]);
     setBusy(true);
     const assistantId = uid("msg");
+    if (!approved && !needsApproval(payload)) {
+      const routed = routeWorkspaceCommand(payload, setWorkspaceMode);
+      if (routed) {
+        appendMessage(id, { id: assistantId, role: "assistant", content: routed, createdAt: Date.now(), model: "workspace-router" });
+        setBusy(false);
+        return;
+      }
+    }
     if (needsApproval(payload) && !approved) {
       const request = `ขออนุญาตก่อนดำเนินการ\n\nคำสั่งนี้อาจแก้ไขไฟล์หรือส่งผลต่อ GitHub / Vercel:\n“${trimmed || "คำสั่งพร้อมไฟล์แนบ"}”\n\nขอบเขตที่รออนุญาต: วิเคราะห์ → แก้ไฟล์ → ตรวจสอบ → commit / push → deploy production\n\nกรุณากด “อนุญาต” หรือ “ปฏิเสธ” ด้านล่าง บอทจะไม่ทำการเปลี่ยนแปลงใด ๆ ก่อนมีคำยืนยัน`;
       appendMessage(id, { id: assistantId, role: "assistant", content: request, createdAt: Date.now() });
