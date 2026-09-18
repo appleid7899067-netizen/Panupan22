@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ArrowUp, Check, Eraser, Paperclip, ShieldAlert, X } from "lucide-react";
 import { Markdown } from "@/components/markdown";
+import { SkillCallCard } from "@/components/SkillCallCard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { generateSystemPrompt, ROLE_META, roleLabel } from "@/lib/agents";
+import { createSkillCall, executeSkill } from "@/lib/bossnugrok/skills";
+import type { SkillCall } from "@/lib/bossnugrok/skills/skill-types";
 import { COPY } from "@/lib/copy";
 import { chatGrok } from "@/lib/grok";
 import { allKnownModels, isXaiModel, shortModelLabel, type FreeModel } from "@/lib/models";
@@ -41,20 +44,20 @@ async function readFile(file: File): Promise<LocalFile> {
     const data = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result ?? ""));
-      reader.onerror = () => reject(new Error("read failed"));
+      reader.onerror = () => reject(reader.error);
       reader.readAsDataURL(file);
     });
-    return { name: file.name, mime, text: `[image ${file.name}] ${data.slice(0, 80)}…` };
+    return { name: file.name, mime, text: `[image data-url omitted, length=${data.length}]` };
   }
-  const raw = await file.text();
-  return { name: file.name, mime, text: raw.slice(0, 12_000) };
+  const text = await file.text();
+  return { name: file.name, mime, text: text.slice(0, 24_000) };
 }
 
 export function ChatPanel() {
-  const { status } = usePuterAuth();
-  const signedIn = status === "signed_in";
   const language = useBossStore((s) => s.language);
   const t = COPY[language];
+  const { status: puterStatus } = usePuterAuth();
+  const signedIn = puterStatus === "signed_in";
   const agents = useBossStore((s) => s.agents);
   const activeAgentId = useBossStore((s) => s.activeAgentId);
   const conversations = useBossStore((s) => s.conversations);
@@ -147,6 +150,102 @@ export function ChatPanel() {
         setBusy(false);
         return;
       }
+
+      // Inline tool call: detect skill and finish inside this chat
+      const skillSeed = createSkillCall(payload);
+      if (skillSeed) {
+        if (skillSeed.status === "pending") {
+          appendMessage(id, {
+            id: assistantId,
+            role: "assistant",
+            content:
+              language === "th"
+                ? `ต้องการใช้เครื่องมือ **${skillSeed.skillId}** — กดอนุญาตด้านล่าง`
+                : `Tool **${skillSeed.skillId}** needs approval — confirm below`,
+            createdAt: Date.now(),
+            model: `skill:${skillSeed.skillId}`,
+            skillCall: {
+              id: skillSeed.id,
+              skillId: skillSeed.skillId,
+              status: "pending",
+              args: skillSeed.args,
+            },
+          });
+          setBusy(false);
+          return;
+        }
+
+        appendMessage(id, {
+          id: assistantId,
+          role: "assistant",
+          content:
+            language === "th"
+              ? `กำลังใช้เครื่องมือ **${skillSeed.skillId}**…`
+              : `Running tool **${skillSeed.skillId}**…`,
+          createdAt: Date.now(),
+          model: `skill:${skillSeed.skillId}`,
+          skillCall: {
+            id: skillSeed.id,
+            skillId: skillSeed.skillId,
+            status: "running",
+            args: skillSeed.args,
+            streamOutput: "",
+          },
+        });
+
+        try {
+          const updated = await executeSkill({ ...skillSeed, status: "running" }, (chunk) => {
+            const prev = useBossStore.getState().conversations.find((c) => c.id === id);
+            const msg = prev?.messages.find((m) => m.id === assistantId);
+            const so = (msg?.skillCall?.streamOutput ?? "") + chunk;
+            patchMessage(id, assistantId, {
+              skillCall: {
+                id: skillSeed.id,
+                skillId: skillSeed.skillId,
+                status: "running",
+                args: skillSeed.args,
+                streamOutput: so,
+              },
+            });
+          });
+          const summary =
+            updated.status === "done"
+              ? language === "th"
+                ? `เครื่องมือ **${updated.skillId}** เสร็จแล้ว${updated.duration != null ? ` (${updated.duration}ms)` : ""}`
+                : `Tool **${updated.skillId}** finished${updated.duration != null ? ` (${updated.duration}ms)` : ""}`
+              : language === "th"
+                ? `เครื่องมือ **${updated.skillId}** ผิดพลาด: ${updated.error ?? ""}`
+                : `Tool **${updated.skillId}** failed: ${updated.error ?? ""}`;
+          patchMessage(id, assistantId, {
+            content: summary,
+            model: `skill:${updated.skillId}`,
+            skillCall: {
+              id: updated.id,
+              skillId: updated.skillId,
+              status: updated.status,
+              args: updated.args,
+              streamOutput: updated.streamOutput,
+              error: updated.error,
+              duration: updated.duration,
+            },
+          });
+        } catch (err) {
+          const raw = err instanceof Error ? err.message : String(err);
+          patchMessage(id, assistantId, {
+            content: raw,
+            skillCall: {
+              id: skillSeed.id,
+              skillId: skillSeed.skillId,
+              status: "error",
+              args: skillSeed.args,
+              error: raw,
+            },
+          });
+        } finally {
+          setBusy(false);
+        }
+        return;
+      }
     }
     if (needsApproval(payload) && !approved) {
       const request = `ขออนุญาตก่อนดำเนินการ\n\nคำสั่งนี้อาจแก้ไขไฟล์หรือส่งผลต่อ GitHub / Vercel:\n“${trimmed || "คำสั่งพร้อมไฟล์แนบ"}”\n\nขอบเขตที่รออนุญาต: วิเคราะห์ → แก้ไฟล์ → ตรวจสอบ → commit / push → deploy production\n\nกรุณากด “อนุญาต” หรือ “ปฏิเสธ” ด้านล่าง บอทจะไม่ทำการเปลี่ยนแปลงใด ๆ ก่อนมีคำยืนยัน`;
@@ -171,7 +270,7 @@ export function ChatPanel() {
         const result = await chatWithPuter({
           messages: [{ role: "system", content: system }, ...history],
           pinnedModel: modelMode,
-      preferTestMode: false,
+          preferTestMode: false,
           onDelta: (next) => patchMessage(id, assistantId, { content: next }),
         });
         patchMessage(id, assistantId, { content: result.text, model: result.model.id });
@@ -249,14 +348,16 @@ export function ChatPanel() {
       <div ref={scroller} className="boss-scroll flex-1 overflow-y-auto px-4 py-5 sm:px-6">
         {!convo || convo.messages.length === 0 ? (
           <div className="mx-auto flex max-w-xl flex-col items-start gap-4 pt-6">
-            <p className="font-display text-3xl tracking-tight">{t.emptyTitle}</p>
-            <p className="text-sm text-muted-foreground">{t.emptyBody}</p>
-            <div className="flex w-full flex-col gap-2">
+            <div>
+              <p className="font-display text-2xl tracking-tight">{t.emptyTitle}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t.emptyBody}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
               {suggestions.map((s) => (
                 <button
                   key={s}
                   type="button"
-                  className="rounded-[var(--radius-lg)] border border-border bg-card px-4 py-3 text-left text-sm text-muted-foreground hover:bg-secondary"
+                  className="rounded-full border border-border bg-card px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-secondary"
                   onClick={() => void send(s)}
                 >
                   {s}
@@ -281,6 +382,68 @@ export function ChatPanel() {
                   ) : msg.role === "assistant" ? (
                     <>
                       <Markdown text={msg.content} />
+                      {msg.skillCall ? (
+                        <div className="mt-3">
+                          <SkillCallCard
+                            call={{
+                              id: msg.skillCall.id,
+                              skillId: msg.skillCall.skillId as SkillCall["skillId"],
+                              status: msg.skillCall.status,
+                              args: msg.skillCall.args ?? {},
+                              streamOutput: msg.skillCall.streamOutput,
+                              error: msg.skillCall.error,
+                              duration: msg.skillCall.duration,
+                            }}
+                            onApprove={() => {
+                              void (async () => {
+                                const seed: SkillCall = {
+                                  id: msg.skillCall!.id,
+                                  skillId: msg.skillCall!.skillId as SkillCall["skillId"],
+                                  args: msg.skillCall!.args ?? {},
+                                  status: "running",
+                                };
+                                setBusy(true);
+                                patchMessage(convo.id, msg.id, {
+                                  content: language === "th" ? "กำลังรันเครื่องมือ…" : "Running tool…",
+                                  skillCall: { ...msg.skillCall!, status: "running", streamOutput: "" },
+                                });
+                                const updated = await executeSkill(seed, (chunk) => {
+                                  const prev = useBossStore.getState().conversations.find((c) => c.id === convo.id);
+                                  const m = prev?.messages.find((x) => x.id === msg.id);
+                                  const so = (m?.skillCall?.streamOutput ?? "") + chunk;
+                                  patchMessage(convo.id, msg.id, {
+                                    skillCall: { ...msg.skillCall!, status: "running", streamOutput: so },
+                                  });
+                                });
+                                patchMessage(convo.id, msg.id, {
+                                  content:
+                                    updated.status === "done"
+                                      ? language === "th"
+                                        ? `เครื่องมือ **${updated.skillId}** เสร็จแล้ว`
+                                        : `Tool **${updated.skillId}** finished`
+                                      : updated.error ?? "error",
+                                  skillCall: {
+                                    id: updated.id,
+                                    skillId: updated.skillId,
+                                    status: updated.status,
+                                    args: updated.args,
+                                    streamOutput: updated.streamOutput,
+                                    error: updated.error,
+                                    duration: updated.duration,
+                                  },
+                                });
+                                setBusy(false);
+                              })();
+                            }}
+                            onReject={() => {
+                              patchMessage(convo.id, msg.id, {
+                                content: language === "th" ? "ยกเลิกเครื่องมือแล้ว" : "Tool cancelled",
+                                skillCall: { ...msg.skillCall!, status: "rejected" },
+                              });
+                            }}
+                          />
+                        </div>
+                      ) : null}
                       {/```/.test(msg.content) ? (
                         <button
                           type="button"
@@ -315,14 +478,11 @@ export function ChatPanel() {
                       <Button
                         type="button"
                         size="sm"
-                        variant="secondary"
+                        variant="ghost"
                         className="h-8 rounded-full"
                         onClick={() => {
-                          appendMessage(approval.conversationId, {
-                            id: uid("msg"),
-                            role: "assistant",
-                            content: "ปฏิเสธแล้ว — ไม่มีการแก้ไฟล์, commit, push หรือ deploy",
-                            createdAt: Date.now(),
+                          patchMessage(approval.conversationId, approval.messageId, {
+                            content: "ปฏิเสธแล้ว — ไม่มีการเปลี่ยนแปลงใด ๆ",
                           });
                           setApproval(null);
                         }}
@@ -399,9 +559,7 @@ export function ChatPanel() {
             <ArrowUp className="size-4" />
           </Button>
         </div>
-        <p className="mx-auto mt-2 max-w-2xl px-1 text-[11px] text-subtle">
-          {modelHint}
-        </p>
+        <p className="mx-auto mt-2 max-w-2xl px-1 text-[11px] text-subtle">{modelHint}</p>
       </form>
     </div>
   );
