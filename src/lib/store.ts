@@ -14,6 +14,16 @@ export type ChatMessage = {
   model?: string;
   imageUrl?: string;
   attachments?: { name: string; mime: string }[];
+  /** Inline tool/skill call result rendered inside the chat bubble */
+  skillCall?: {
+    id: string;
+    skillId: string;
+    status: "pending" | "running" | "done" | "error" | "rejected";
+    args?: Record<string, unknown>;
+    streamOutput?: string;
+    error?: string;
+    duration?: number;
+  };
 };
 
 export type CreatedImage = {
@@ -89,10 +99,7 @@ const emptySlice: WorkspaceSlice = {
   modelMode: "auto",
   lastModelId: null,
   workspaceMode: "command",
-  sandboxCode: `// BossnuGrok sandbox — no network, no parent DOM
-console.log("ready");
-const sum = [1, 2, 3].reduce((a, b) => a + b, 0);
-console.log("sum", sum);`,
+  sandboxCode: `// BossnuGrok sandbox — no network, no parent DOM\nconsole.log("ready");\nconst sum = [1, 2, 3].reduce((a, b) => a + b, 0);\nconsole.log("sum", sum);`,
   creates: [],
 };
 
