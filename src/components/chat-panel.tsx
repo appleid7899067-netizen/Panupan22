@@ -106,7 +106,7 @@ export function ChatPanel() {
     const el = scroller.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [convo?.messages.length, busy, agent?.id]);
+  }, [convo?.messages.length, busy, agent?.id, convo?.messages[convo.messages.length - 1]?.content]);
 
   useEffect(() => {
     if (!signedIn) return;
@@ -151,7 +151,6 @@ export function ChatPanel() {
         return;
       }
 
-      // Inline tool call: detect skill and finish inside this chat
       const skillSeed = createSkillCall(payload);
       if (skillSeed) {
         if (skillSeed.status === "pending") {
@@ -264,7 +263,14 @@ export function ChatPanel() {
       if (isXaiModel(modelMode)) {
         const result = await chatGrok({ data: { messages: history, system } });
         if (!result.ok) throw new Error(result.error);
-        patchMessage(id, assistantId, { content: result.text, model: result.model });
+        const full = result.text;
+        const step = Math.max(12, Math.floor(full.length / 40));
+        for (let i = 0; i < full.length; i += step) {
+          const shown = full.slice(0, Math.min(full.length, i + step));
+          patchMessage(id, assistantId, { content: shown, model: result.model });
+          await new Promise((r) => setTimeout(r, 16));
+        }
+        patchMessage(id, assistantId, { content: full, model: result.model });
         setLastModelId(result.model);
       } else {
         const result = await chatWithPuter({
@@ -333,13 +339,7 @@ export function ChatPanel() {
               </option>
             ))}
           </select>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-9"
-            onClick={() => clearConversation(agent.id)}
-            aria-label={t.newChat}
-          >
+          <Button variant="ghost" size="icon" className="size-9" onClick={() => clearConversation(agent.id)} aria-label={t.newChat}>
             <Eraser className="size-4" />
           </Button>
         </div>
@@ -505,10 +505,7 @@ export function ChatPanel() {
         {files.length > 0 ? (
           <div className="mx-auto mb-2 flex max-w-2xl flex-wrap gap-2">
             {files.map((f) => (
-              <span
-                key={f.name}
-                className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px]"
-              >
+              <span key={f.name} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px]">
                 {f.name}
                 <button type="button" onClick={() => setFiles((prev) => prev.filter((x) => x.name !== f.name))} aria-label="remove">
                   <X className="size-3" />
@@ -531,31 +528,11 @@ export function ChatPanel() {
               e.target.value = "";
             }}
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="mb-0.5 size-11 shrink-0 rounded-full"
-            onClick={() => fileRef.current?.click()}
-            aria-label={t.attach}
-          >
+          <Button type="button" variant="ghost" size="icon" className="mb-0.5 size-11 shrink-0 rounded-full" onClick={() => fileRef.current?.click()} aria-label={t.attach}>
             <Paperclip className="size-4" />
           </Button>
-          <Textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={onKey}
-            placeholder={t.composePh}
-            rows={1}
-            className="max-h-36 min-h-11 flex-1 py-2.5"
-          />
-          <Button
-            type="submit"
-            size="icon"
-            className="mb-0.5 size-11 shrink-0 rounded-full"
-            disabled={busy || (!draft.trim() && files.length === 0)}
-            aria-label={t.send}
-          >
+          <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={onKey} placeholder={t.composePh} rows={1} className="max-h-36 min-h-11 flex-1 py-2.5" />
+          <Button type="submit" size="icon" className="mb-0.5 size-11 shrink-0 rounded-full" disabled={busy || (!draft.trim() && files.length === 0)} aria-label={t.send}>
             <ArrowUp className="size-4" />
           </Button>
         </div>
