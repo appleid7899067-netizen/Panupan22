@@ -11,6 +11,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Markdown } from "@/components/markdown";
+import { SkillsLabPanel } from "@/components/SkillsLabPanel";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -53,7 +54,6 @@ export function GrokSuperPanel() {
     return () => window.clearInterval(id);
   }, []);
 
-  // Default: select all agents for alliance
   useEffect(() => {
     if (agents.length > 0 && selected.size === 0) {
       setSelected(new Set(agents.map((a) => a.id)));
@@ -91,13 +91,11 @@ export function GrokSuperPanel() {
     }));
     setReplies(initial);
 
-    // Fire all agents in parallel
     await Promise.all(
       alliance.map(async (agent) => {
         const system = generateSystemPrompt(agent, language);
         const conversationId = ensureConversation(agent.id);
 
-        // Record user message in that agent's history
         appendMessage(conversationId, {
           id: uid("msg"),
           role: "user",
@@ -186,6 +184,7 @@ export function GrokSuperPanel() {
         error: "ผิดพลาด",
         open: "เปิดแชท",
         members: "สมาชิก",
+        skills: "ทักษะ + ความจำ",
       }
     : {
         eyebrow: "GROKSUPER ALLIANCE",
@@ -206,11 +205,11 @@ export function GrokSuperPanel() {
         error: "Error",
         open: "Open chat",
         members: "Members",
+        skills: "Skills + Memory",
       };
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-      {/* Header */}
       <header className="border-b border-border px-4 py-5 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -245,7 +244,6 @@ export function GrokSuperPanel() {
       </header>
 
       <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-        {/* Left: Alliance roster */}
         <aside className="space-y-4">
           <section className="rounded-2xl border border-border bg-card/50 p-4">
             <div className="flex items-center justify-between">
@@ -258,20 +256,10 @@ export function GrokSuperPanel() {
               </span>
             </div>
             <div className="mt-3 flex gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                className="h-7 flex-1 text-[11px]"
-                onClick={selectAll}
-              >
+              <Button size="sm" variant="secondary" className="h-7 flex-1 text-[11px]" onClick={selectAll}>
                 {labels.all}
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 flex-1 text-[11px]"
-                onClick={clearAll}
-              >
+              <Button size="sm" variant="ghost" className="h-7 flex-1 text-[11px]" onClick={clearAll}>
                 {labels.none}
               </Button>
             </div>
@@ -335,9 +323,7 @@ export function GrokSuperPanel() {
           </section>
         </aside>
 
-        {/* Right: Mission + Replies */}
         <div className="space-y-4">
-          {/* Mission input */}
           <section className="rounded-2xl border border-border bg-card/50 p-4">
             <div className="flex items-center gap-2">
               <Sparkles className="size-4 text-yellow-300" />
@@ -360,17 +346,12 @@ export function GrokSuperPanel() {
                 disabled={running || !mission.trim() || alliance.length === 0}
                 onClick={() => void briefAlliance()}
               >
-                {running ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Send className="size-3.5" />
-                )}
+                {running ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
                 {running ? labels.briefing : labels.brief}
               </Button>
             </div>
           </section>
 
-          {/* Replies */}
           <section className="rounded-2xl border border-border bg-card/50">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <div className="flex items-center gap-2">
@@ -379,8 +360,7 @@ export function GrokSuperPanel() {
               </div>
               {replies.length > 0 ? (
                 <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-subtle">
-                  {replies.filter((r) => r.status === "done").length}/
-                  {replies.length}
+                  {replies.filter((r) => r.status === "done").length}/{replies.length}
                 </span>
               ) : null}
             </div>
@@ -448,6 +428,14 @@ export function GrokSuperPanel() {
             )}
           </section>
         </div>
+      </div>
+
+      {/* Skills + Memory — additive, does not replace chat */}
+      <div className="border-t border-border p-4 sm:p-6">
+        <p className="mb-3 text-[10px] font-semibold tracking-[0.18em] text-violet-300">
+          {labels.skills}
+        </p>
+        <SkillsLabPanel />
       </div>
     </div>
   );
