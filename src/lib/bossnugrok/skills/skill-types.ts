@@ -2,6 +2,7 @@ export type SkillId =
   | "code-runner"
   | "daily-fixer"
   | "web-search"
+  | "live-scores"
   | "link-follower"
   | "doc-reader";
 
