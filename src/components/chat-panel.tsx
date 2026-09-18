@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowUp, Eraser, Paperclip, X } from "lucide-react";
+import { ArrowUp, Check, Eraser, Paperclip, ShieldAlert, X } from "lucide-react";
 import { Markdown } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +13,11 @@ import { useBossStore } from "@/lib/store";
 import { cn, uid } from "@/lib/utils";
 
 type LocalFile = { name: string; mime: string; text: string };
+type ApprovalRequest = { conversationId: string; messageId: string; command: string };
+
+function needsApproval(command: string) {
+  return /github|git push|commit|deploy|vercel|production|แก้(ไข)?ไฟล์|เพิ่มฟีเจอร์|ลบไฟล์|ส่งขึ้น|push|publish/i.test(command);
+}
 
 async function readFile(file: File): Promise<LocalFile> {
   const mime = file.type || "application/octet-stream";
@@ -57,6 +62,7 @@ export function ChatPanel() {
   const [busy, setBusy] = useState(false);
   const [files, setFiles] = useState<LocalFile[]>([]);
   const [remoteModels, setRemoteModels] = useState<FreeModel[]>([]);
+  const [approval, setApproval] = useState<ApprovalRequest | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -95,7 +101,7 @@ export function ChatPanel() {
     };
   }, [signedIn]);
 
-  const send = async (text: string) => {
+  const send = async (text: string, approved = false) => {
     const trimmed = text.trim();
     if ((!trimmed && files.length === 0) || busy || !agent) return;
     const id = ensureConversation(agent.id);
@@ -104,18 +110,27 @@ export function ChatPanel() {
         ? `\n\n${t.attached}:\n${files.map((f) => `- ${f.name} (${f.mime})\n${f.text.slice(0, 4000)}`).join("\n\n")}`
         : "";
     const payload = `${trimmed}${fileNote}`.trim();
-    appendMessage(id, {
-      id: uid("msg"),
-      role: "user",
-      content: payload,
-      createdAt: Date.now(),
-      attachments: files.map((f) => ({ name: f.name, mime: f.mime })),
-    });
-    bumpMessageCount(agent.id);
+    if (!approved) {
+      appendMessage(id, {
+        id: uid("msg"),
+        role: "user",
+        content: payload,
+        createdAt: Date.now(),
+        attachments: files.map((f) => ({ name: f.name, mime: f.mime })),
+      });
+      bumpMessageCount(agent.id);
+    }
     setDraft("");
     setFiles([]);
     setBusy(true);
     const assistantId = uid("msg");
+    if (needsApproval(payload) && !approved) {
+      const request = `ขออนุญาตก่อนดำเนินการ\n\nคำสั่งนี้อาจแก้ไขไฟล์หรือส่งผลต่อ GitHub / Vercel:\n“${trimmed || "คำสั่งพร้อมไฟล์แนบ"}”\n\nขอบเขตที่รออนุญาต: วิเคราะห์ → แก้ไฟล์ → ตรวจสอบ → commit / push → deploy production\n\nกรุณากด “อนุญาต” หรือ “ปฏิเสธ” ด้านล่าง บอทจะไม่ทำการเปลี่ยนแปลงใด ๆ ก่อนมีคำยืนยัน`;
+      appendMessage(id, { id: assistantId, role: "assistant", content: request, createdAt: Date.now() });
+      setApproval({ conversationId: id, messageId: assistantId, command: payload });
+      setBusy(false);
+      return;
+    }
     appendMessage(id, { id: assistantId, role: "assistant", content: "", createdAt: Date.now() });
     try {
       const history = (useBossStore.getState().conversations.find((c) => c.id === id)?.messages ?? [])
@@ -259,6 +274,39 @@ export function ChatPanel() {
                   ) : (
                     <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
                   )}
+                  {msg.id === approval?.messageId ? (
+                    <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 rounded-full bg-lime-300 text-black hover:bg-lime-200"
+                        onClick={() => {
+                          const command = approval.command;
+                          setApproval(null);
+                          void send(command, true);
+                        }}
+                      >
+                        <Check className="size-3.5" /> อนุญาต
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 rounded-full"
+                        onClick={() => {
+                          appendMessage(approval.conversationId, {
+                            id: uid("msg"),
+                            role: "assistant",
+                            content: "ปฏิเสธแล้ว — ไม่มีการแก้ไฟล์, commit, push หรือ deploy",
+                            createdAt: Date.now(),
+                          });
+                          setApproval(null);
+                        }}
+                      >
+                        <ShieldAlert className="size-3.5" /> ปฏิเสธ
+                      </Button>
+                    </div>
+                  ) : null}
                   {msg.role === "assistant" && msg.model ? (
                     <p className="mt-2 text-[10px] uppercase tracking-wider text-subtle">{shortModelLabel(msg.model)}</p>
                   ) : null}
