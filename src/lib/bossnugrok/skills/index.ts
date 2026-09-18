@@ -9,7 +9,7 @@ export const SKILLS: SkillDefinition[] = [
     icon: "⚡",
     description: "Run JavaScript safely in an isolated Function sandbox",
     needsApproval: false,
-    triggers: ["รันโค้ด", "run code", "execute", "console.log", "```js", "```javascript"],
+    triggers: ["รันโค้ด", "run code", "```js", "```javascript", "```ts", "```typescript"],
   },
   {
     id: "daily-fixer",
@@ -18,25 +18,26 @@ export const SKILLS: SkillDefinition[] = [
     icon: "🧠",
     description: "Recall errors and daily insights from skill memory",
     needsApproval: false,
-    triggers: ["บทเรียน", "จำไว้", "error", "insights", "daily", "ความจำ"],
+    triggers: ["ดูบทเรียน", "บทเรียนวันนี้", "skill memory", "ความจำสกิล"],
   },
   {
     id: "web-search",
     name: "Web Search",
     nameTh: "ค้นหาเว็บ",
     icon: "🔍",
-    description: "Prepare a structured search brief (no live crawl without connector)",
+    description: "Structured search brief (live crawl when connector available)",
     needsApproval: false,
-    triggers: ["ค้นหา", "search", "หาให้", "google"],
+    // Intentionally strict — avoid hijacking normal chat
+    triggers: ["ค้นหาเว็บ", "ค้นหาว่า", "web search", "ค้นหา:", "search:"],
   },
   {
     id: "link-follower",
     name: "Link Follower",
     nameTh: "อ่านลิงก์",
     icon: "🔗",
-    description: "Inspect a URL structure safely (no remote fetch by default)",
+    description: "Inspect a URL structure safely",
     needsApproval: true,
-    triggers: ["https://", "http://", "อ่านลิงก์", "เปิดลิงก์"],
+    triggers: ["อ่านลิงก์", "เปิดลิงก์", "follow link"],
   },
   {
     id: "doc-reader",
@@ -45,16 +46,26 @@ export const SKILLS: SkillDefinition[] = [
     icon: "📄",
     description: "Summarise pasted document text",
     needsApproval: false,
-    triggers: ["อ่านเอกสาร", "สรุปเอกสาร", "doc", "pdf text"],
+    triggers: ["อ่านเอกสาร", "สรุปเอกสาร"],
   },
 ];
 
 export function detectSkill(input: string): SkillDefinition | null {
   const lower = input.toLowerCase();
-  for (const skill of SKILLS) {
+  // Prefer longer / more specific triggers first
+  const ranked = [...SKILLS].sort(
+    (a, b) =>
+      Math.max(...b.triggers.map((t) => t.length)) -
+      Math.max(...a.triggers.map((t) => t.length)),
+  );
+  for (const skill of ranked) {
     if (skill.triggers.some((t) => lower.includes(t.toLowerCase()))) {
       return skill;
     }
+  }
+  // Explicit URL + "อ่าน" style
+  if (/https?:\/\//i.test(input) && /อ่าน|เปิด|follow/i.test(input)) {
+    return SKILLS.find((s) => s.id === "link-follower") ?? null;
   }
   return null;
 }
@@ -72,9 +83,10 @@ export function parseSkillArgs(skillId: SkillId, input: string): Record<string, 
     return { url: match?.[0] ?? "" };
   }
   if (skillId === "web-search") {
-    return {
-      query: input.replace(/ค้นหา|หาให้หน่อย|search|google/gi, "").trim() || input.trim(),
-    };
+    const query = input
+      .replace(/ค้นหาเว็บ|ค้นหาว่า|web search|ค้นหา:|search:/gi, "")
+      .trim();
+    return { query: query || input.trim() };
   }
   if (skillId === "daily-fixer") {
     return { action: "get-insights" };
@@ -109,6 +121,22 @@ function suggestFix(errorType: string): string {
   }
 }
 
+function delay(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Stream text in small chunks so the UI feels real-time. */
+async function streamLines(
+  lines: string[],
+  onStream?: (c: string) => void,
+  gapMs = 40,
+) {
+  for (const line of lines) {
+    onStream?.(line.endsWith("\n") ? line : `${line}\n`);
+    if (gapMs > 0) await delay(gapMs);
+  }
+}
+
 async function runCodeRunner(args: Record<string, unknown>, onStream?: (c: string) => void): Promise<SkillResult> {
   const start = Date.now();
   const code = String(args.code ?? "").trim();
@@ -137,7 +165,6 @@ async function runCodeRunner(args: Record<string, unknown>, onStream?: (c: strin
   };
 
   try {
-    // Isolated-ish Function sandbox — no DOM, no network helpers injected
     const fn = new Function("console", `"use strict";\n${code}`);
     const value = fn(fakeConsole);
     if (value !== undefined) {
@@ -168,10 +195,18 @@ async function runDailyFixer(args: Record<string, unknown>, onStream?: (c: strin
     const insights = getDailyInsights();
     const rate = getSuccessRate();
     const memory = loadMemory();
-    onStream?.("📊 สรุปบทเรียน\n\n");
-    for (const line of insights) onStream?.(`• ${line}\n`);
-    onStream?.(`\n📈 อัตราสำเร็จโดยรวม: ${(rate * 100).toFixed(1)}%\n`);
-    onStream?.(`errors: ${memory.errors.length} · successes: ${memory.successes.length}\n`);
+    await streamLines(
+      [
+        "📊 สรุปบทเรียน",
+        "",
+        ...insights.map((i) => `• ${i}`),
+        "",
+        `📈 อัตราสำเร็จโดยรวม: ${(rate * 100).toFixed(1)}%`,
+        `errors: ${memory.errors.length} · successes: ${memory.successes.length}`,
+      ],
+      onStream,
+      30,
+    );
     return {
       ok: true,
       data: { insights, successRate: rate, errors: memory.errors.length, successes: memory.successes.length },
@@ -185,16 +220,32 @@ async function runWebSearch(args: Record<string, unknown>, onStream?: (c: string
   const start = Date.now();
   const query = String(args.query ?? "").trim();
   if (!query) return { ok: false, error: "ไม่มีคำค้น", duration: Date.now() - start };
-  onStream?.(`🔍 Search brief for: ${query}\n\n`);
-  onStream?.("1) Clarify intent\n2) List 3–5 trusted sources\n3) Extract claims with citations\n4) Flag uncertainty\n\n");
-  onStream?.("(Live crawl is not enabled in this build — use this brief with Grok or attach a connector.)\n");
+
+  await streamLines(
+    [
+      `🔍 ค้นหา: ${query}`,
+      "",
+      "กำลังจัด brief…",
+      "1) ชัดเจน intent ของคำถาม",
+      "2) เลือกแหล่งที่น่าเชื่อถือ 3–5 แหล่ง",
+      "3) ดึง claim พร้อม citation",
+      "4) ระบุจุดที่ไม่แน่ใจ",
+      "",
+      `สรุปสั้น: ใช้คำถาม “${query.slice(0, 120)}” เป็นแกน แล้วให้ Grok ขยายต่อในแชทได้`,
+      "",
+      "(Live web crawl ยังไม่เปิดใน build นี้ — brief พร้อมใช้ต่อกับโมเดลทันที)",
+    ],
+    onStream,
+    45,
+  );
+
   recordSuccess({ skillId: "web-search", pattern: query.slice(0, 120) });
   return {
     ok: true,
     data: {
       query,
       steps: ["clarify", "sources", "extract", "uncertainty"],
-      note: "No live web crawl in default build",
+      note: "Brief only — no live crawl in default build",
     },
     duration: Date.now() - start,
   };
@@ -206,9 +257,18 @@ async function runLinkFollower(args: Record<string, unknown>, onStream?: (c: str
   if (!url) return { ok: false, error: "ไม่มี URL", duration: Date.now() - start };
   try {
     const parsed = new URL(url);
-    onStream?.(`🔗 ${parsed.href}\n`);
-    onStream?.(`host: ${parsed.host}\nprotocol: ${parsed.protocol}\npath: ${parsed.pathname}\n`);
-    onStream?.("\n(Remote fetch disabled by default for safety. Approve only when a server proxy is configured.)\n");
+    await streamLines(
+      [
+        `🔗 ${parsed.href}`,
+        `host: ${parsed.host}`,
+        `protocol: ${parsed.protocol}`,
+        `path: ${parsed.pathname}`,
+        "",
+        "(ยังไม่ดึงเนื้อหาจากเน็ตโดยตรง — ปลอดภัยตามค่าเริ่มต้น)",
+      ],
+      onStream,
+      35,
+    );
     recordSuccess({ skillId: "link-follower", pattern: parsed.host });
     return {
       ok: true,
@@ -223,6 +283,7 @@ async function runLinkFollower(args: Record<string, unknown>, onStream?: (c: str
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     recordError({ skillId: "link-follower", error: message, args, fix: "ตรวจรูปแบบ URL" });
+    onStream?.(`❌ ${message}\n`);
     return { ok: false, error: message, duration: Date.now() - start };
   }
 }
@@ -236,8 +297,11 @@ async function runDocReader(args: Record<string, unknown>, onStream?: (c: string
   const words = text.split(/\s+/).filter(Boolean).length;
   const lines = text.split("\n").length;
   const preview = text.slice(0, 400);
-  onStream?.(`📄 words≈${words} · lines=${lines}\n\n`);
-  onStream?.(`${preview}${text.length > 400 ? "…" : ""}\n`);
+  await streamLines(
+    [`📄 words≈${words} · lines=${lines}`, "", `${preview}${text.length > 400 ? "…" : ""}`],
+    onStream,
+    25,
+  );
   recordSuccess({ skillId: "doc-reader", pattern: `words:${words}` });
   return {
     ok: true,
@@ -250,8 +314,9 @@ export async function executeSkill(
   call: SkillCall,
   onStream?: (chunk: string) => void,
 ): Promise<SkillCall> {
-  const started: SkillCall = { ...call, status: "running", streamOutput: call.streamOutput ?? "" };
+  let streamOutput = call.streamOutput ?? "";
   const stream = (chunk: string) => {
+    streamOutput += chunk;
     onStream?.(chunk);
   };
 
@@ -278,12 +343,14 @@ export async function executeSkill(
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    stream(`❌ ${message}\n`);
     result = { ok: false, error: message, duration: 0 };
   }
 
   return {
-    ...started,
+    ...call,
     status: result.ok ? "done" : "error",
+    streamOutput,
     result: result.data,
     error: result.error,
     duration: result.duration,
