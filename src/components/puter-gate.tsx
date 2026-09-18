@@ -10,12 +10,12 @@ import type { ReactNode } from "react";
 
 export function PuterGate({ children }: { children: ReactNode }) {
   const { status } = usePuterAuth();
-  if (status === "signed_in" || status === "guest") return <>{children}</>;
+  if (status === "signed_in") return <>{children}</>;
   return <PuterLoginScreen />;
 }
 
 export function PuterLoginScreen() {
-  const { status, error, pending, signIn, continueAsGuest, retry } = usePuterAuth();
+  const { status, error, pending, signIn, retry } = usePuterAuth();
   const language = useBossStore((s) => s.language);
   const setLanguage = useBossStore((s) => s.setLanguage);
   const t = COPY[language];
@@ -82,9 +82,6 @@ export function PuterLoginScreen() {
               <div className="flex h-12 items-center justify-center rounded-full bg-secondary text-sm text-muted-foreground">
                 {t.connecting}
               </div>
-              <Button size="lg" variant="ghost" className="h-12 w-full rounded-full text-sm" onClick={continueAsGuest}>
-                {t.continueGuest}
-              </Button>
             </div>
           ) : (
             <div className="mt-8 space-y-3">
@@ -96,15 +93,6 @@ export function PuterLoginScreen() {
               >
                 <PuterMark className="size-4" />
                 {pending ? t.waitingPuter : t.continuePuter}
-              </Button>
-              <Button
-                size="lg"
-                variant="ghost"
-                className="h-12 w-full rounded-full text-sm"
-                onClick={continueAsGuest}
-                disabled={pending}
-              >
-                {t.continueGuest}
               </Button>
               {unavailable ? (
                 <Button

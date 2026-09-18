@@ -12,9 +12,7 @@ import { getPuter, loadPuter, puterErrorMessage, type PuterSDK, type PuterUser }
 import { applyWorkspace, pullWorkspace, pushWorkspace, snapshotWorkspace } from "@/lib/puter-sync";
 import { useBossStore } from "@/lib/store";
 
-const GUEST_KEY = "bossnugrok-guest";
-
-export type PuterAuthStatus = "loading" | "signed_out" | "signed_in" | "guest" | "unavailable";
+export type PuterAuthStatus = "loading" | "signed_out" | "signed_in" | "unavailable";
 export type PuterSyncStatus = "idle" | "syncing" | "synced" | "error";
 
 type PuterAuthValue = {
@@ -25,28 +23,10 @@ type PuterAuthValue = {
   syncStatus: PuterSyncStatus;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
-  continueAsGuest: () => void;
   retry: () => Promise<void>;
 };
 
 const PuterAuthContext = createContext<PuterAuthValue | null>(null);
-
-function readGuest(): boolean {
-  try {
-    return sessionStorage.getItem(GUEST_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function writeGuest(on: boolean) {
-  try {
-    if (on) sessionStorage.setItem(GUEST_KEY, "1");
-    else sessionStorage.removeItem(GUEST_KEY);
-  } catch {
-    /* private mode */
-  }
-}
 
 export function PuterAuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<PuterAuthStatus>("loading");
@@ -66,15 +46,14 @@ export function PuterAuthProvider({ children }: { children: ReactNode }) {
         const next = await puter.auth.getUser();
         setUser(next);
         setStatus("signed_in");
-        writeGuest(false);
         return;
       }
       setUser(null);
-      setStatus(readGuest() ? "guest" : "signed_out");
+      setStatus("signed_out");
     } catch (err) {
       sdkRef.current = getPuter();
       setUser(null);
-      setStatus(readGuest() ? "guest" : "unavailable");
+      setStatus("unavailable");
       setError(puterErrorMessage(err));
     }
   }, []);
@@ -94,7 +73,6 @@ export function PuterAuthProvider({ children }: { children: ReactNode }) {
     try {
       await puter.auth.signIn();
       const next = await puter.auth.getUser();
-      writeGuest(false);
       setUser(next);
       setStatus("signed_in");
     } catch (err) {
@@ -111,17 +89,8 @@ export function PuterAuthProvider({ children }: { children: ReactNode }) {
     } catch {
       /* already signed out */
     }
-    writeGuest(false);
     setUser(null);
     setStatus("signed_out");
-    setError(null);
-    setSyncStatus("idle");
-  }, []);
-
-  const continueAsGuest = useCallback(() => {
-    writeGuest(true);
-    setUser(null);
-    setStatus("guest");
     setError(null);
     setSyncStatus("idle");
   }, []);
@@ -187,10 +156,9 @@ export function PuterAuthProvider({ children }: { children: ReactNode }) {
       syncStatus,
       signIn,
       signOut,
-      continueAsGuest,
       retry: hydrate,
     }),
-    [status, user, error, pending, syncStatus, signIn, signOut, continueAsGuest, hydrate],
+    [status, user, error, pending, syncStatus, signIn, signOut, hydrate],
   );
 
   return <PuterAuthContext.Provider value={value}>{children}</PuterAuthContext.Provider>;

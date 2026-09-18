@@ -30,7 +30,7 @@ async function readFile(file: File): Promise<LocalFile> {
 }
 
 export function ChatPanel() {
-  const { status, signIn, pending: authPending } = usePuterAuth();
+  const { status } = usePuterAuth();
   const signedIn = status === "signed_in";
   const language = useBossStore((s) => s.language);
   const t = COPY[language];
@@ -132,7 +132,7 @@ export function ChatPanel() {
         const result = await chatWithPuter({
           messages: [{ role: "system", content: system }, ...history],
           pinnedModel: modelMode,
-          preferTestMode: !signedIn,
+      preferTestMode: false,
           onDelta: (next) => patchMessage(id, assistantId, { content: next }),
         });
         patchMessage(id, assistantId, { content: result.text, model: result.model.id });
@@ -329,20 +329,6 @@ export function ChatPanel() {
         </div>
         <p className="mx-auto mt-2 max-w-2xl px-1 text-[11px] text-subtle">
           {modelHint}
-          {!signedIn ? (
-            <>
-              {" · "}
-              {t.guestBanner}
-              <button
-                type="button"
-                className="ml-2 underline decoration-border underline-offset-2"
-                onClick={() => void signIn()}
-                disabled={authPending}
-              >
-                {t.signInNow}
-              </button>
-            </>
-          ) : null}
         </p>
       </form>
     </div>

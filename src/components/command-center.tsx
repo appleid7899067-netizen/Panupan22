@@ -117,7 +117,7 @@ export function CommandCenter() {
               className="size-10"
               onClick={() => void signIn()}
               disabled={pending}
-              aria-label={t.signInNow}
+              aria-label={t.continuePuter}
             >
               <PuterMark className="size-4" />
             </Button>
