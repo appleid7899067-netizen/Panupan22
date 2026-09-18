@@ -13,20 +13,17 @@ import { allKnownModels, isXaiModel, shortModelLabel, type FreeModel } from "@/l
 import { chatWithPuter, listPuterModels } from "@/lib/puter-ai";
 import { usePuterAuth } from "@/lib/puter-auth";
 import { useBossStore } from "@/lib/store";
+import { needsApproval } from "@/lib/chat-guards";
 import { cn, uid } from "@/lib/utils";
 
 type LocalFile = { name: string; mime: string; text: string };
 type ApprovalRequest = { conversationId: string; messageId: string; command: string };
 
-function needsApproval(command: string) {
-  return /github|git push|commit|deploy|vercel|production|แก้(ไข)?ไฟล์|เพิ่มฟีเจอร์|ลบไฟล์|ส่งขึ้น|push|publish/i.test(command);
-}
-
 function routeWorkspaceCommand(command: string, setWorkspaceMode: (mode: "command" | "create" | "sandbox" | "live" | "terminal" | "super" | "manus") => void) {
   const value = command.toLowerCase();
   const routes = [
     { match: /manus|browser\s*\/?\s*os|เบราว์เซอร์|บราวเซอร์|จำลองระบบ/, mode: "manus" as const, label: "Manus Hub · Browser / OS Mock Simulation" },
-    { match: /sandbox|prompt\s*lab|พรอมต์|แซนด์บ็อกซ์/, mode: "sandbox" as const, label: "Sandbox · Prompt Lab และ JavaScript Sandbox" },
+    { match: /sandbox|prompt\s*lab|promptlab|พรอมต์\s*lab|พรอมต์แล็บ|แซนด์บ็อกซ์/, mode: "sandbox" as const, label: "Sandbox · Prompt Lab และ JavaScript Sandbox" },
     { match: /live\s*stream|สตรีมสด|telemetry|ไลฟ์/, mode: "live" as const, label: "Live Stream · telemetry และ event log" },
     { match: /terminal|เทอร์มินอล|คำสั่ง shell/, mode: "terminal" as const, label: "Terminal · browser-safe command simulator" },
     { match: /groksuper|grok\s*super/, mode: "super" as const, label: "GrokSuper · test lab" },
