@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowUp, Check, Eraser, Paperclip, ShieldAlert, X } from "lucide-react";
+import { ArrowUp, Eraser, Paperclip, X } from "lucide-react";
 import { Markdown } from "@/components/markdown";
+import { ApprovalCard } from "@/components/ApprovalCard";
 import { SkillCallCard } from "@/components/SkillCallCard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -244,7 +245,7 @@ export function ChatPanel() {
       }
     }
     if (needsApproval(payload) && !approved) {
-      const request = `ขออนุญาตก่อนดำเนินการ\n\nคำสั่งนี้อาจแก้ไขไฟล์หรือส่งผลต่อ GitHub / Vercel:\n“${trimmed || "คำสั่งพร้อมไฟล์แนบ"}”\n\nขอบเขตที่รออนุญาต: วิเคราะห์ → แก้ไฟล์ → ตรวจสอบ → commit / push → deploy production\n\nกรุณากด “อนุญาต” หรือ “ปฏิเสธ” ด้านล่าง บอทจะไม่ทำการเปลี่ยนแปลงใด ๆ ก่อนมีคำยืนยัน`;
+      const request = `คำสั่งนี้อาจเปลี่ยนแปลงระบบ — ยืนยันด้านล่างก่อนดำเนินการ`;
       appendMessage(id, { id: assistantId, role: "assistant", content: request, createdAt: Date.now() });
       setApproval({ conversationId: id, messageId: assistantId, command: payload });
       setBusy(false);
@@ -459,34 +460,21 @@ export function ChatPanel() {
                     <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
                   )}
                   {msg.id === approval?.messageId ? (
-                    <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="h-8 rounded-full bg-lime-300 text-black hover:bg-lime-200"
-                        onClick={() => {
-                          const command = approval.command;
-                          setApproval(null);
-                          void send(command, true);
-                        }}
-                      >
-                        <Check className="size-3.5" /> อนุญาต
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 rounded-full"
-                        onClick={() => {
-                          patchMessage(approval.conversationId, approval.messageId, {
-                            content: "ปฏิเสธแล้ว — ไม่มีการเปลี่ยนแปลงใด ๆ",
-                          });
-                          setApproval(null);
-                        }}
-                      >
-                        <ShieldAlert className="size-3.5" /> ปฏิเสธ
-                      </Button>
-                    </div>
+                    <ApprovalCard
+                      command={approval.command}
+                      context="ขอบเขต: วิเคราะห์ → แก้ไฟล์ → ตรวจสอบ → commit / push → deploy production"
+                      onApprove={() => {
+                        const command = approval.command;
+                        setApproval(null);
+                        void send(command, true);
+                      }}
+                      onReject={() => {
+                        patchMessage(approval.conversationId, approval.messageId, {
+                          content: "ปฏิเสธแล้ว — ไม่มีการเปลี่ยนแปลงใด ๆ",
+                        });
+                        setApproval(null);
+                      }}
+                    />
                   ) : null}
                   {msg.role === "assistant" && msg.model ? (
                     <p className="mt-2 text-[10px] uppercase tracking-wider text-subtle">{shortModelLabel(msg.model)}</p>
