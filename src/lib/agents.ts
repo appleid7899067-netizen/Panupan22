@@ -117,11 +117,33 @@ const ROLE_PROMPTS: Record<AgentRole, { th: string; en: string }> = {
   },
 };
 
+const TABLE_HINT = {
+  th: `เมื่อต้องเปรียบเทียบหรือแสดงข้อมูลเป็นตาราง ให้ใช้ Markdown table มาตรฐานเท่านั้น:
+**ชื่อตาราง**
+
+| คอลัมน์1 | คอลัมน์2 |
+|---|---|
+| ค่า1 | ค่า2 |
+
+ต้องมีบรรทัด separator (|---|---|) เสมอ และขึ้นต้นทุกแถวด้วย |`,
+  en: `When comparing or presenting structured data, use standard Markdown tables only:
+**Table title**
+
+| Column1 | Column2 |
+|---|---|
+| Value1 | Value2 |
+
+Always include a separator row (|---|---|) and start every row with |.`,
+};
+
 export function roleLabel(role: AgentRole, lang: Lang): string {
   return lang === "th" ? ROLE_META[role].th : ROLE_META[role].en;
 }
 
-export function generateSystemPrompt(spec: Pick<AgentRecord, "role" | "task" | "constraints">, lang: Lang): string {
+export function generateSystemPrompt(
+  spec: Pick<AgentRecord, "role" | "task" | "constraints">,
+  lang: Lang,
+): string {
   const base = ROLE_PROMPTS[spec.role][lang];
   const taskLabel = lang === "th" ? "ภารกิจหลัก" : "Primary mission";
   const ruleLabel = lang === "th" ? "กฎเหล็ก" : "Hard constraints";
@@ -129,7 +151,7 @@ export function generateSystemPrompt(spec: Pick<AgentRecord, "role" | "task" | "
     lang === "th"
       ? "ตอบเป็นภาษาไทย เว้นแต่ผู้ใช้จะสลับภาษา"
       : "Reply in English unless the user switches language.";
-  let prompt = `${base}\n\n${langLine}\n\n${taskLabel}: ${spec.task}`;
+  let prompt = `${base}\n\n${langLine}\n\n${TABLE_HINT[lang]}\n\n${taskLabel}: ${spec.task}`;
   if (spec.constraints.length > 0) {
     prompt += `\n\n${ruleLabel}:\n- ${spec.constraints.join("\n- ")}`;
   }
