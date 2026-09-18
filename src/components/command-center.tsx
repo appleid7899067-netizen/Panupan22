@@ -24,6 +24,13 @@ import { AppMark, PuterMark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { APP_DEVELOPER, APP_SHORT_NAME } from "@/lib/brand";
+import {
+  isAutoPilotRunning,
+  startAutoPilot,
+  stopAutoPilot,
+  subscribeAutoPilot,
+  type AutoPilotEvent,
+} from "@/lib/bossnugrok/auto-pilot";
 import { COPY } from "@/lib/copy";
 import { usePuterAuth } from "@/lib/puter-auth";
 import { useBossStore, type WorkspaceMode } from "@/lib/store";
@@ -50,12 +57,36 @@ export function CommandCenter() {
   const [agentsOpen, setAgentsOpen] = useState(false);
   const [forgeOpen, setForgeOpen] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  const [autoOn, setAutoOn] = useState(false);
+  const [lastPulse, setLastPulse] = useState<string | null>(null);
 
-  // Real-time clock tick
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(id);
   }, []);
+
+  // Auto-pilot starts on by default for continuous receive/run feel
+  useEffect(() => {
+    startAutoPilot(4000);
+    setAutoOn(true);
+    const unsub = subscribeAutoPilot((events: AutoPilotEvent[]) => {
+      if (events[0]) setLastPulse(events[0].detail);
+    });
+    return () => {
+      unsub();
+      stopAutoPilot();
+    };
+  }, []);
+
+  const toggleAuto = () => {
+    if (isAutoPilotRunning()) {
+      stopAutoPilot();
+      setAutoOn(false);
+    } else {
+      startAutoPilot(4000);
+      setAutoOn(true);
+    }
+  };
 
   const syncLabel =
     syncStatus === "synced"
@@ -83,9 +114,8 @@ export function CommandCenter() {
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
-      {/* ── Top status bar (real-time) ── */}
       <div className="flex items-center justify-between gap-3 border-b border-border bg-card/40 px-3 py-1.5 text-[10px] sm:px-4">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <span className="inline-flex items-center gap-1.5 font-semibold tracking-wider text-lime-300">
             <span className="relative flex size-1.5">
               <span className="absolute inline-flex size-1.5 animate-ping rounded-full bg-lime-300 opacity-75" />
@@ -93,6 +123,25 @@ export function CommandCenter() {
             </span>
             LIVE
           </span>
+          <button
+            type="button"
+            onClick={toggleAuto}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold tracking-wider",
+              autoOn
+                ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-300"
+                : "border-border text-muted-foreground",
+            )}
+            title={language === "th" ? "ระบบอัตโนมัติ" : "Auto-pilot"}
+          >
+            <span
+              className={cn(
+                "size-1.5 rounded-full",
+                autoOn ? "animate-pulse bg-cyan-300" : "bg-muted-foreground",
+              )}
+            />
+            AUTO
+          </button>
           <span className="hidden text-muted-foreground sm:inline">
             {now.toLocaleTimeString(language === "th" ? "th-TH" : "en-US", {
               hour: "2-digit",
@@ -100,6 +149,11 @@ export function CommandCenter() {
               second: "2-digit",
             })}
           </span>
+          {lastPulse && autoOn ? (
+            <span className="hidden truncate text-muted-foreground md:inline">
+              · {lastPulse}
+            </span>
+          ) : null}
           {syncLabel ? (
             <span className="text-muted-foreground">· {syncLabel}</span>
           ) : null}
@@ -112,7 +166,6 @@ export function CommandCenter() {
         </div>
       </div>
 
-      {/* ── Main header ── */}
       <header className="flex items-center gap-2 border-b border-border px-3 py-2 sm:px-4">
         <AppMark className="size-8 shrink-0 text-brand" />
         <div className="min-w-0 flex-1">
@@ -125,7 +178,6 @@ export function CommandCenter() {
           </p>
         </div>
 
-        {/* Desktop mode pills */}
         <div className="hidden max-w-[55vw] items-center gap-0.5 overflow-x-auto rounded-2xl border border-border bg-card/50 p-1 sm:flex">
           {MODES.map((m) => {
             const active = workspaceMode === m.id;
@@ -216,7 +268,6 @@ export function CommandCenter() {
         </div>
       </header>
 
-      {/* ── Mobile mode rail (horizontal scroll) ── */}
       <div className="flex gap-1.5 overflow-x-auto border-b border-border px-3 py-2 sm:hidden">
         {MODES.map((m) => {
           const active = workspaceMode === m.id;
@@ -239,9 +290,7 @@ export function CommandCenter() {
         })}
       </div>
 
-      {/* ── Main grid ── */}
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_300px]">
-        {/* Left: Agent channels */}
         <aside className="hidden min-h-0 border-r border-border lg:block">
           <div className="flex h-full flex-col">
             <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
@@ -259,7 +308,6 @@ export function CommandCenter() {
           </div>
         </aside>
 
-        {/* Center: Active channel */}
         <main className="flex min-h-0 flex-col">
           <div className="min-h-0 flex-1">
             {workspaceMode === "create" ? (
@@ -280,7 +328,6 @@ export function CommandCenter() {
           </div>
         </main>
 
-        {/* Right: Forge */}
         <aside className="hidden min-h-0 border-l border-border xl:block">
           <div className="flex h-full flex-col">
             <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
@@ -296,12 +343,11 @@ export function CommandCenter() {
         </aside>
       </div>
 
-      {/* Footer */}
       <p className="hidden border-t border-border px-4 py-1.5 text-center text-[10px] tracking-wide text-subtle sm:block">
         {APP_SHORT_NAME} · {APP_DEVELOPER} · Real-time
+        {autoOn ? " · AUTO" : ""}
       </p>
 
-      {/* Mobile sheets */}
       <Sheet open={agentsOpen} onOpenChange={setAgentsOpen}>
         <SheetContent side="left" className="pt-10">
           <SheetTitle className="sr-only">{t.registry}</SheetTitle>
