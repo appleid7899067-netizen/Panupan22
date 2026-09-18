@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Activity, Hammer, ImagePlus, LayoutGrid, LogOut, Sparkles, SquareTerminal, Terminal } from "lucide-react";
+import { Activity, Hammer, ImagePlus, LayoutGrid, Library, LogOut, Sparkles, SquareTerminal, Terminal } from "lucide-react";
 import { AgentList } from "@/components/agent-list";
 import { ChatPanel } from "@/components/chat-panel";
 import { CreatePanel } from "@/components/create-panel";
@@ -8,6 +8,7 @@ import { LiveStreamPanel } from "@/components/live-stream-panel";
 import { GrokSuperPanel } from "@/components/grok-super-panel";
 import { SandboxPanel } from "@/components/sandbox-panel";
 import { TerminalPanel } from "@/components/terminal-panel";
+import { ManusHubPanel } from "@/components/manus-hub-panel";
 import { AppMark, PuterMark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -24,6 +25,7 @@ const MODES: { id: WorkspaceMode; icon: typeof ImagePlus }[] = [
   { id: "live", icon: Activity },
   { id: "terminal", icon: Terminal },
   { id: "super", icon: Sparkles },
+  { id: "manus", icon: Library },
 ];
 
 export function CommandCenter() {
@@ -41,7 +43,7 @@ export function CommandCenter() {
     syncStatus === "synced" ? t.synced : syncStatus === "syncing" ? t.syncing : syncStatus === "error" ? t.syncError : null;
 
   const modeLabel = (id: WorkspaceMode) =>
-    id === "create" ? t.modeCreate : id === "sandbox" ? t.modeSandbox : id === "live" ? t.modeLive : id === "terminal" ? t.modeTerminal : id === "super" ? t.modeSuper : t.modeCommand;
+    id === "create" ? t.modeCreate : id === "sandbox" ? t.modeSandbox : id === "live" ? t.modeLive : id === "terminal" ? t.modeTerminal : id === "super" ? t.modeSuper : id === "manus" ? t.modeManus : t.modeCommand;
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
@@ -158,6 +160,8 @@ export function CommandCenter() {
               <TerminalPanel />
             ) : workspaceMode === "super" ? (
               <GrokSuperPanel />
+            ) : workspaceMode === "manus" ? (
+              <ManusHubPanel />
             ) : (
               <ChatPanel />
             )}

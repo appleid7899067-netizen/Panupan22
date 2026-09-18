@@ -4,7 +4,7 @@ import { CORE_BOSS, makeAgentId, type AgentRecord, type AgentRole } from "@/lib/
 import type { Lang } from "@/lib/copy";
 import { uid } from "@/lib/utils";
 
-export type WorkspaceMode = "command" | "create" | "sandbox" | "live" | "terminal" | "super";
+export type WorkspaceMode = "command" | "create" | "sandbox" | "live" | "terminal" | "super" | "manus";
 
 export type ChatMessage = {
   id: string;
