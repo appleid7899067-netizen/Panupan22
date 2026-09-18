@@ -1,5 +1,6 @@
 import type { SkillCall, SkillDefinition, SkillId, SkillResult } from "./skill-types";
 import { recordError, recordSuccess, getDailyInsights, getSuccessRate, loadMemory } from "../memory/storage";
+import { fetchLiveData } from "@/lib/live-data";
 
 export const SKILLS: SkillDefinition[] = [
   {
@@ -21,14 +22,30 @@ export const SKILLS: SkillDefinition[] = [
     triggers: ["ดูบทเรียน", "บทเรียนวันนี้", "skill memory", "ความจำสกิล"],
   },
   {
+    id: "live-scores",
+    name: "Live Scores",
+    nameTh: "ผลบอล",
+    icon: "⚽",
+    description: "Fetch live football scores and fixtures online",
+    needsApproval: false,
+    triggers: [
+      "ผลบอล",
+      "ผลพรีเมียร์",
+      "ดูผลบอล",
+      "live scores",
+      "football scores",
+      "premier league score",
+      "ตารางคะแนน",
+    ],
+  },
+  {
     id: "web-search",
     name: "Web Search",
     nameTh: "ค้นหาเว็บ",
     icon: "🔍",
-    description: "Structured search brief (live crawl when connector available)",
+    description: "Live online search (Wikipedia + DuckDuckGo + football when relevant)",
     needsApproval: false,
-    // Intentionally strict — avoid hijacking normal chat
-    triggers: ["ค้นหาเว็บ", "ค้นหาว่า", "web search", "ค้นหา:", "search:"],
+    triggers: ["ค้นหาเว็บ", "ค้นหาว่า", "web search", "ค้นหา:", "search:", "ดึงข้อมูลออนไลน์"],
   },
   {
     id: "link-follower",
@@ -52,7 +69,12 @@ export const SKILLS: SkillDefinition[] = [
 
 export function detectSkill(input: string): SkillDefinition | null {
   const lower = input.toLowerCase();
-  // Prefer longer / more specific triggers first
+
+  // Football keyword path even without exact trigger phrase
+  if (/ผลบอล|live\s*scores|football\s*score|soccer\s*score|พรีเมียร์.*ผล|ผล.*พรีเมียร์|ลาลีกา.*ผล|บุนเดส/i.test(input)) {
+    return SKILLS.find((s) => s.id === "live-scores") ?? null;
+  }
+
   const ranked = [...SKILLS].sort(
     (a, b) =>
       Math.max(...b.triggers.map((t) => t.length)) -
@@ -63,7 +85,6 @@ export function detectSkill(input: string): SkillDefinition | null {
       return skill;
     }
   }
-  // Explicit URL + "อ่าน" style
   if (/https?:\/\//i.test(input) && /อ่าน|เปิด|follow/i.test(input)) {
     return SKILLS.find((s) => s.id === "link-follower") ?? null;
   }
@@ -82,9 +103,9 @@ export function parseSkillArgs(skillId: SkillId, input: string): Record<string, 
     const match = input.match(/https?:\/\/[^\s]+/i);
     return { url: match?.[0] ?? "" };
   }
-  if (skillId === "web-search") {
+  if (skillId === "web-search" || skillId === "live-scores") {
     const query = input
-      .replace(/ค้นหาเว็บ|ค้นหาว่า|web search|ค้นหา:|search:/gi, "")
+      .replace(/ค้นหาเว็บ|ค้นหาว่า|web search|ค้นหา:|search:|ดึงข้อมูลออนไลน์|ดูผลบอล|ผลบอล|live scores/gi, "")
       .trim();
     return { query: query || input.trim() };
   }
@@ -125,12 +146,7 @@ function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-/** Stream text in small chunks so the UI feels real-time. */
-async function streamLines(
-  lines: string[],
-  onStream?: (c: string) => void,
-  gapMs = 40,
-) {
+async function streamLines(lines: string[], onStream?: (c: string) => void, gapMs = 40) {
   for (const line of lines) {
     onStream?.(line.endsWith("\n") ? line : `${line}\n`);
     if (gapMs > 0) await delay(gapMs);
@@ -140,9 +156,7 @@ async function streamLines(
 async function runCodeRunner(args: Record<string, unknown>, onStream?: (c: string) => void): Promise<SkillResult> {
   const start = Date.now();
   const code = String(args.code ?? "").trim();
-  if (!code) {
-    return { ok: false, error: "ไม่มีโค้ดให้รัน", duration: Date.now() - start };
-  }
+  if (!code) return { ok: false, error: "ไม่มีโค้ดให้รัน", duration: Date.now() - start };
 
   onStream?.("$ node (sandbox)\n");
   const logs: string[] = [];
@@ -216,39 +230,48 @@ async function runDailyFixer(args: Record<string, unknown>, onStream?: (c: strin
   return { ok: false, error: `unknown action: ${action}`, duration: Date.now() - start };
 }
 
-async function runWebSearch(args: Record<string, unknown>, onStream?: (c: string) => void): Promise<SkillResult> {
+async function runLiveOnline(
+  skillId: "web-search" | "live-scores",
+  args: Record<string, unknown>,
+  onStream?: (c: string) => void,
+): Promise<SkillResult> {
   const start = Date.now();
-  const query = String(args.query ?? "").trim();
+  let query = String(args.query ?? "").trim();
+  if (!query) {
+    query = skillId === "live-scores" ? "ผลบอล Premier League" : "";
+  }
   if (!query) return { ok: false, error: "ไม่มีคำค้น", duration: Date.now() - start };
 
-  await streamLines(
-    [
-      `🔍 ค้นหา: ${query}`,
-      "",
-      "กำลังจัด brief…",
-      "1) ชัดเจน intent ของคำถาม",
-      "2) เลือกแหล่งที่น่าเชื่อถือ 3–5 แหล่ง",
-      "3) ดึง claim พร้อม citation",
-      "4) ระบุจุดที่ไม่แน่ใจ",
-      "",
-      `สรุปสั้น: ใช้คำถาม “${query.slice(0, 120)}” เป็นแกน แล้วให้ Grok ขยายต่อในแชทได้`,
-      "",
-      "(Live web crawl ยังไม่เปิดใน build นี้ — brief พร้อมใช้ต่อกับโมเดลทันที)",
-    ],
-    onStream,
-    45,
-  );
+  // Force football path for live-scores
+  if (skillId === "live-scores" && !/ผลบอล|football|soccer|premier|พรีเมียร์/i.test(query)) {
+    query = `ผลบอล ${query}`;
+  }
 
-  recordSuccess({ skillId: "web-search", pattern: query.slice(0, 120) });
-  return {
-    ok: true,
-    data: {
-      query,
-      steps: ["clarify", "sources", "extract", "uncertainty"],
-      note: "Brief only — no live crawl in default build",
-    },
-    duration: Date.now() - start,
-  };
+  onStream?.(`🌐 กำลังดึงข้อมูลออนไลน์…\n`);
+  onStream?.(`query: ${query}\n\n`);
+
+  try {
+    const result = await fetchLiveData({ data: { query } });
+    if (!result.ok) {
+      onStream?.(`❌ ${result.error}\n`);
+      recordError({ skillId, error: result.error, args, fix: "ลองใหม่หรือเปลี่ยนคำค้น" });
+      return { ok: false, error: result.error, duration: Date.now() - start };
+    }
+
+    const lines = result.summary.split("\n");
+    await streamLines(lines, onStream, 25);
+    recordSuccess({ skillId, pattern: query.slice(0, 120) });
+    return {
+      ok: true,
+      data: { query: result.query, kind: result.kind, hits: result.hits },
+      duration: Date.now() - start,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    onStream?.(`❌ ${message}\n`);
+    recordError({ skillId, error: message, args, fix: "ตรวจเครือข่ายเซิร์ฟเวอร์" });
+    return { ok: false, error: message, duration: Date.now() - start };
+  }
 }
 
 async function runLinkFollower(args: Record<string, unknown>, onStream?: (c: string) => void): Promise<SkillResult> {
@@ -272,12 +295,7 @@ async function runLinkFollower(args: Record<string, unknown>, onStream?: (c: str
     recordSuccess({ skillId: "link-follower", pattern: parsed.host });
     return {
       ok: true,
-      data: {
-        href: parsed.href,
-        host: parsed.host,
-        path: parsed.pathname,
-        fetched: false,
-      },
+      data: { href: parsed.href, host: parsed.host, path: parsed.pathname, fetched: false },
       duration: Date.now() - start,
     };
   } catch (err) {
@@ -291,9 +309,7 @@ async function runLinkFollower(args: Record<string, unknown>, onStream?: (c: str
 async function runDocReader(args: Record<string, unknown>, onStream?: (c: string) => void): Promise<SkillResult> {
   const start = Date.now();
   const text = String(args.text ?? "").trim();
-  if (text.length < 20) {
-    return { ok: false, error: "ข้อความสั้นเกินไป", duration: Date.now() - start };
-  }
+  if (text.length < 20) return { ok: false, error: "ข้อความสั้นเกินไป", duration: Date.now() - start };
   const words = text.split(/\s+/).filter(Boolean).length;
   const lines = text.split("\n").length;
   const preview = text.slice(0, 400);
@@ -303,11 +319,7 @@ async function runDocReader(args: Record<string, unknown>, onStream?: (c: string
     25,
   );
   recordSuccess({ skillId: "doc-reader", pattern: `words:${words}` });
-  return {
-    ok: true,
-    data: { words, lines, preview },
-    duration: Date.now() - start,
-  };
+  return { ok: true, data: { words, lines, preview }, duration: Date.now() - start };
 }
 
 export async function executeSkill(
@@ -330,7 +342,10 @@ export async function executeSkill(
         result = await runDailyFixer(call.args, stream);
         break;
       case "web-search":
-        result = await runWebSearch(call.args, stream);
+        result = await runLiveOnline("web-search", call.args, stream);
+        break;
+      case "live-scores":
+        result = await runLiveOnline("live-scores", call.args, stream);
         break;
       case "link-follower":
         result = await runLinkFollower(call.args, stream);
