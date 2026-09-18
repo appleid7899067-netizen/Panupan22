@@ -20,12 +20,12 @@ import { cn } from "@/lib/utils";
 
 const MODES: { id: WorkspaceMode; icon: typeof ImagePlus }[] = [
   { id: "command", icon: LayoutGrid },
+  { id: "manus", icon: Library },
   { id: "create", icon: ImagePlus },
   { id: "sandbox", icon: SquareTerminal },
   { id: "live", icon: Activity },
   { id: "terminal", icon: Terminal },
   { id: "super", icon: Sparkles },
-  { id: "manus", icon: Library },
 ];
 
 export function CommandCenter() {
@@ -127,7 +127,7 @@ export function CommandCenter() {
         </div>
       </header>
 
-      <div className="hidden gap-1 border-b border-border px-3 py-2 sm:hidden">
+      <div className="flex gap-1 overflow-x-auto border-b border-border px-3 py-2 sm:hidden">
         {MODES.map((m) => (
           <button
             key={m.id}
