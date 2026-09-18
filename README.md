@@ -9,7 +9,24 @@
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-panupan22.vercel.app-blue?style=for-the-badge)](https://panupan22.vercel.app)
 [![Version](https://img.shields.io/badge/Version-0.2.0-green?style=for-the-badge)](https://github.com/appleid7899067-netizen/Panupan22)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/appleid7899067-netizen/Panupan22?style=for-the-badge)](https://github.com/appleid7899067-netizen/Panupan22/stargazers)
+
+---
+
+## 📸 Preview
+
+<p align="center">
+  <img src="screenshots/command-center.png" width="800" alt="Command Center"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/chat-sent.png" width="400" alt="Chat"/>
+  <img src="screenshots/forged.png" width="400" alt="Forge"/>
+</p>
+
+<p align="center">
+  <img src="screenshots/mobile-center.png" width="300" alt="Mobile"/>
+</p>
 
 ---
 
@@ -54,7 +71,7 @@ You can use LangGraph for core logic inside your product and put BossnuGrok as t
 
 ## 🏗️ Core Modules (v0.2.0)
 
-Located in `src/lib/bossnugrok/`:
+Located in [`src/lib/bossnugrok/`](src/lib/bossnugrok/):
 
 | Module                    | Description                                      |
 |---------------------------|--------------------------------------------------|
@@ -67,7 +84,7 @@ Located in `src/lib/bossnugrok/`:
 | **Deployment Config**     | Vercel / Docker / CI ready                       |
 | **System Integration**    | One entry point that wires everything together   |
 
-Full documentation: [`src/lib/bossnugrok/INSTALLATION_GUIDE.md`](src/lib/bossnugrok/INSTALLATION_GUIDE.md)
+Full documentation: [`INSTALLATION_GUIDE.md`](src/lib/bossnugrok/INSTALLATION_GUIDE.md)
 
 ---
 
@@ -126,16 +143,12 @@ Grok 4.5 pricing: **$2 / M input + $6 / M output** (significantly cheaper than C
 
 ---
 
-## 📸 Screenshots
+## 🤝 Contributing & Support
 
-> (Add screenshots of Command Center, Create mode, Sandbox, Agent list here)
+Issues and PRs are welcome.
 
----
-
-## 🤝 Contributing
-
-Issues and PRs are welcome.  
-If you find BossnuGrok useful, a ⭐ star is the best support.
+**If you find BossnuGrok useful, please give it a ⭐ star.**  
+It is the single best way to support the project and help more people discover it.
 
 ---
 
