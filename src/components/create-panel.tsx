@@ -14,10 +14,13 @@ export function CreatePanel() {
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [style, setStyle] = useState("cinematic noir");
+  const [ratio, setRatio] = useState("16:9");
+  const presets = ["BossG command center", "cyberpunk city at night", "minimal product hero"];
 
   const generate = async (e?: FormEvent) => {
     e?.preventDefault();
-    const trimmed = prompt.trim();
+    const trimmed = `${prompt.trim()}, ${style}, ${ratio} composition`;
     if (trimmed.length < 3 || busy) return;
     setBusy(true);
     setError(null);
@@ -51,6 +54,13 @@ export function CreatePanel() {
           rows={3}
           className="w-full rounded-[var(--radius-lg)] border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-subtle outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
         />
+        <div className="mt-3 flex flex-wrap gap-2">
+          {presets.map((preset) => <button key={preset} type="button" onClick={() => setPrompt(preset)} className="rounded-full border border-border px-3 py-1.5 text-[11px] text-muted-foreground hover:bg-secondary">{preset}</button>)}
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <select value={style} onChange={(e) => setStyle(e.target.value)} className="h-10 rounded-[var(--radius-md)] border border-border bg-card px-3 text-xs outline-none"><option value="cinematic noir">Cinematic noir</option><option value="editorial studio">Editorial studio</option><option value="3D soft light">3D soft light</option><option value="anime key visual">Anime key visual</option></select>
+          <select value={ratio} onChange={(e) => setRatio(e.target.value)} className="h-10 rounded-[var(--radius-md)] border border-border bg-card px-3 text-xs outline-none"><option>16:9</option><option>9:16</option><option>1:1</option></select>
+        </div>
         <div className="mt-3 flex items-center gap-3">
           <Button type="submit" className="h-11 rounded-[var(--radius-lg)] px-5" disabled={busy || prompt.trim().length < 3}>
             {busy ? <LoaderCircle className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}

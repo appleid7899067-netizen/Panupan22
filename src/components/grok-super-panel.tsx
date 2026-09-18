@@ -1,0 +1,16 @@
+import { CheckCircle2, CircleDashed, ImagePlus, MessageSquare, Radio, Terminal, Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useBossStore } from "@/lib/store";
+
+export function GrokSuperPanel() {
+  const language = useBossStore((s) => s.language);
+  const setWorkspaceMode = useBossStore((s) => s.setWorkspaceMode);
+  const th = language === "th";
+  const cards = [
+    { icon: MessageSquare, title: th ? "สนทนา Grok" : "Chat with Grok", body: th ? "ทดสอบคำสั่งกับเอเจนต์และประวัติแชต" : "Test commands, agents, and conversation history", mode: "command" as const, state: "ready" },
+    { icon: ImagePlus, title: th ? "สร้างภาพ" : "Create images", body: th ? "ส่ง prompt เข้า Imagine และเก็บผลลัพธ์ใน workspace" : "Send prompts to Imagine and keep results in the workspace", mode: "create" as const, state: "ready" },
+    { icon: Terminal, title: "Terminal", body: th ? "ทดสอบคำสั่งจำลองใน terminal ที่ปลอดภัย" : "Try browser-safe simulated terminal commands", mode: "terminal" as const, state: "ready" },
+    { icon: Radio, title: th ? "สตรีมสด" : "Live Stream", body: th ? "ดู telemetry และ event stream แบบ mock" : "Inspect mock telemetry and event stream", mode: "live" as const, state: "preview" },
+  ];
+  return <div className="flex h-full min-h-0 flex-col overflow-y-auto"><div className="border-b border-border px-4 py-6 sm:px-6"><div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.22em] text-lime-300"><Zap className="size-3.5" /> GROKSUPER TEST LAB</div><h2 className="mt-2 font-display text-3xl tracking-tight">GrokSuper</h2><p className="mt-1 max-w-2xl text-sm text-muted-foreground">{th ? "ศูนย์ทดสอบความสามารถทั้งหมดของ BossG ในที่เดียว" : "A single test surface for the capabilities inside BossG"}</p></div><div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-6">{cards.map(({ icon: Icon, title, body, mode, state }) => <div key={mode} className="group rounded-[var(--radius-xl)] border border-border bg-card/60 p-4 transition-colors hover:border-border-strong hover:bg-secondary/40"><div className="flex items-start justify-between"><span className="flex size-10 items-center justify-center rounded-xl border border-border bg-background text-cyan-300"><Icon className="size-4" /></span>{state === "ready" ? <CheckCircle2 className="size-4 text-lime-300" /> : <CircleDashed className="size-4 text-amber-300" />}</div><h3 className="mt-5 font-medium">{title}</h3><p className="mt-1 min-h-10 text-xs leading-relaxed text-muted-foreground">{body}</p><Button variant="secondary" size="sm" className="mt-4 w-full" onClick={() => setWorkspaceMode(mode)}>{th ? "เปิดทดสอบ" : "Open test"}</Button></div>)}</div><div className="mx-4 mb-4 rounded-[var(--radius-xl)] border border-lime-300/20 bg-lime-300/[0.04] p-4 sm:mx-6"><p className="text-xs font-medium text-lime-200">{th ? "สถานะการทดสอบ" : "Test status"}</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{th ? "Grok chat และ image generation เชื่อม provider ตามการตั้งค่าปัจจุบัน ส่วน Terminal และ Live Stream เป็น preview ที่ปลอดภัย" : "Grok chat and image generation use the current provider setup. Terminal and Live Stream are safe previews."}</p></div></div>;
+}
