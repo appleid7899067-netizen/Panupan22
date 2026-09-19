@@ -118,7 +118,8 @@ Located in [`src/lib/bossnugrok/`](src/lib/bossnugrok/):
 | **Deployment Config**     | Vercel / Docker / CI ready                       |
 | **System Integration**    | One entry point that wires everything together   |
 
-Full documentation: [`INSTALLATION_GUIDE.md`](src/lib/bossnugrok/INSTALLATION_GUIDE.md)
+Full documentation: [`INSTALLATION_GUIDE.md`](src/lib/bossnugrok/INSTALLATION_GUIDE.md)  
+Judge/demo manifest: [`docs/GROKATHON.md`](docs/GROKATHON.md) · `GET /api/capabilities`
 
 ---
 
