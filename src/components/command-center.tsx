@@ -20,6 +20,7 @@ import { GrokSuperPanel } from "@/components/grok-super-panel";
 import { SandboxPanel } from "@/components/sandbox-panel";
 import { TerminalPanel } from "@/components/terminal-panel";
 import { ManusHubPanel } from "@/components/manus-hub-panel";
+import { AppsPanel } from "@/components/apps-panel";
 import { AppMark, PuterMark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -38,6 +39,7 @@ import { cn } from "@/lib/utils";
 
 const MODES: { id: WorkspaceMode; icon: typeof ImagePlus; color: string }[] = [
   { id: "command", icon: LayoutGrid, color: "text-cyan-300" },
+  { id: "apps", icon: Box, color: "text-emerald-300" },
   { id: "manus", icon: Library, color: "text-violet-300" },
   { id: "create", icon: ImagePlus, color: "text-pink-300" },
   { id: "sandbox", icon: SquareTerminal, color: "text-amber-300" },
@@ -98,7 +100,7 @@ export function CommandCenter() {
           : null;
 
   const modeLabel = (id: WorkspaceMode) =>
-    id === "create"
+    id === "apps"\n      ? (language === "th" ? "แอพ" : "Apps")\n      : id === "create"
       ? t.modeCreate
       : id === "sandbox"
         ? t.modeSandbox
@@ -310,7 +312,7 @@ export function CommandCenter() {
 
         <main className="flex min-h-0 flex-col">
           <div className="min-h-0 flex-1">
-            {workspaceMode === "create" ? (
+            {workspaceMode === "apps" ? (\n              <AppsPanel />\n            ) : workspaceMode === "create" ? (
               <CreatePanel />
             ) : workspaceMode === "sandbox" ? (
               <SandboxPanel />
