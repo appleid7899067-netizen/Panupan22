@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireUserId } from "@/lib/auth/verify.server";
 
 const MANUS_API = "https://api.manus.ai/v2";
+const MANUS_COOKIE = "boss_manus_api_key";
 
-function json(data: unknown, status = 200) {
+function json(data: unknown, status = 200, extraHeaders: HeadersInit = {}) {
   return Response.json(data, {
     status,
-    headers: { "Cache-Control": "no-store" },
+    headers: { "Cache-Control": "no-store", ...extraHeaders },
   });
 }
 
@@ -15,9 +16,20 @@ function sameOrigin(request: Request) {
   return !origin || origin === new URL(request.url).origin;
 }
 
-async function manusFetch(path: string, init: RequestInit = {}) {
-  const key = process.env.MANUS_API_KEY?.trim();
-  if (!key) return json({ ok: false, error: "Manus is not configured on the server." }, 503);
+function cookieValue(request: Request, name: string) {
+  const raw = request.headers.get("cookie") ?? "";
+  const match = raw.split(";").map((item) => item.trim()).find((item) => item.startsWith(`${name}=`));
+  if (!match) return "";
+  try { return decodeURIComponent(match.slice(name.length + 1)); } catch { return ""; }
+}
+
+function getManusKey(request: Request) {
+  return process.env.MANUS_API_KEY?.trim() || cookieValue(request, MANUS_COOKIE).trim();
+}
+
+async function manusFetch(request: Request, path: string, init: RequestInit = {}) {
+  const key = getManusKey(request);
+  if (!key) return json({ ok: false, error: "Manus is not configured." }, 503);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -54,45 +66,52 @@ export const Route = createFileRoute("/api/manus")({
         const url = new URL(request.url);
         const action = url.searchParams.get("action") ?? "status";
         if (action === "status") {
-          const configured = Boolean(process.env.MANUS_API_KEY?.trim());
-          return json({ ok: true, configured });
+          return json({ ok: true, configured: Boolean(getManusKey(request)) });
         }
         if (action === "tasks") {
           const limit = Math.min(20, Math.max(1, Number(url.searchParams.get("limit") || 10) || 10));
-          return manusFetch(`/task.list?limit=${limit}&order=desc`);
+          return manusFetch(request, `/task.list?limit=${limit}&order=desc`);
         }
         if (action === "messages") {
           const taskId = url.searchParams.get("taskId")?.trim() ?? "";
           if (!taskId || taskId.length > 200) return json({ ok: false, error: "Valid taskId is required." }, 400);
           const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 20) || 20));
-          return manusFetch(`/task.listMessages?task_id=${encodeURIComponent(taskId)}&order=asc&limit=${limit}`);
+          return manusFetch(request, `/task.listMessages?task_id=${encodeURIComponent(taskId)}&order=asc&limit=${limit}`);
         }
-        if (action === "projects") return manusFetch("/project.list");
+        if (action === "projects") return manusFetch(request, "/project.list");
         return json({ ok: false, error: "Unsupported action" }, 400);
       },
       POST: async ({ request }) => {
         if (!sameOrigin(request)) return json({ ok: false, error: "Cross-origin request blocked." }, 403);
         try { await requireUserId(); } catch { return json({ ok: false, error: "Unauthorized" }, 401); }
-        let body: { action?: string; prompt?: string; taskId?: string };
+        let body: { action?: string; prompt?: string; taskId?: string; apiKey?: string };
         try { body = (await request.json()) as typeof body; } catch { return json({ ok: false, error: "Invalid JSON" }, 400); }
+
+        if (body.action === "configure") {
+          const apiKey = body.apiKey?.trim() ?? "";
+          if (!apiKey || apiKey.length > 500) return json({ ok: false, error: "Valid Manus API key is required." }, 400);
+          return json({ ok: true, configured: true }, 200, {
+            "Set-Cookie": `${MANUS_COOKIE}=${encodeURIComponent(apiKey)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
+          });
+        }
+
+        if (body.action === "disconnect") {
+          return json({ ok: true, configured: Boolean(process.env.MANUS_API_KEY?.trim()) }, 200, {
+            "Set-Cookie": `${MANUS_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`,
+          });
+        }
 
         if (body.action === "create") {
           const prompt = body.prompt?.trim() ?? "";
           if (!prompt) return json({ ok: false, error: "Prompt is required." }, 400);
           if (prompt.length > 12000) return json({ ok: false, error: "Prompt is too long." }, 413);
-          return manusFetch("/task.create", {
-            method: "POST",
-            body: JSON.stringify({ message: { content: prompt } }),
-          });
+          return manusFetch(request, "/task.create", { method: "POST", body: JSON.stringify({ message: { content: prompt } }) });
         }
 
         if (body.action === "stop") {
           const taskId = body.taskId?.trim() ?? "";
           if (!taskId || taskId.length > 200) return json({ ok: false, error: "Valid taskId is required." }, 400);
-          return manusFetch("/task.stop", {
-            method: "POST",
-            body: JSON.stringify({ task_id: taskId }),
-          });
+          return manusFetch(request, "/task.stop", { method: "POST", body: JSON.stringify({ task_id: taskId }) });
         }
 
         return json({ ok: false, error: "Unsupported action" }, 400);
