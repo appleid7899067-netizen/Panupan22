@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowUp, Eraser, Paperclip, X } from "lucide-react";
+import { ArrowUp, Eraser, Paperclip, Search, X } from "lucide-react";
 import { Markdown } from "@/components/markdown";
 import { ApprovalCard } from "@/components/ApprovalCard";
 import { BotFlowOptions } from "@/components/BotFlowOptions";
@@ -113,6 +113,7 @@ export function ChatPanel() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [files, setFiles] = useState<LocalFile[]>([]);
+  const [liveSearch, setLiveSearch] = useState(false);
   const [remoteModels, setRemoteModels] = useState<FreeModel[]>([]);
   const [approval, setApproval] = useState<ApprovalRequest | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
@@ -296,7 +297,7 @@ export function ChatPanel() {
         paintFlow(id, assistantId, flow, { skillCall: skillPatch });
 
         if (modelMode !== "auto" && isXaiModel(modelMode)) {
-          const result = await chatGrok({ data: { messages: modelHistory, system } });
+          const result = await chatGrok({ data: { messages: modelHistory, system, liveSearch } });
           if (!result.ok) throw new Error(result.error);
           const full = result.text;
           const step = Math.max(12, Math.floor(full.length / 40));
@@ -415,7 +416,7 @@ export function ChatPanel() {
         .map((m) => ({ role: m.role, content: m.content }));
       const system = generateSystemPrompt(agent, language);
       if (isXaiModel(modelMode)) {
-        const result = await chatGrok({ data: { messages: history, system } });
+        const result = await chatGrok({ data: { messages: history, system, liveSearch } });
         if (!result.ok) throw new Error(result.error);
         const full = result.text;
         flow.complete("model", result.model);
@@ -517,6 +518,21 @@ export function ChatPanel() {
               </option>
             ))}
           </select>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-9 gap-1.5 rounded-full px-2.5 text-xs",
+              liveSearch ? "bg-lime-300/15 text-lime-300" : "text-muted-foreground",
+            )}
+            onClick={() => setLiveSearch((value) => !value)}
+            aria-pressed={liveSearch}
+            title={language === "th" ? "ค้นข้อมูลสดด้วย Grok" : "Search the web with Grok"}
+          >
+            <Search className="size-3.5" />
+            <span className="hidden sm:inline">{language === "th" ? "ค้นสด" : "Live"}</span>
+          </Button>
           <Button variant="ghost" size="icon" className="size-9" onClick={() => clearConversation(agent.id)} aria-label={t.newChat}>
             <Eraser className="size-4" />
           </Button>

@@ -24,7 +24,7 @@ function clip(text: string, max = MAX_PROMPT) {
 }
 
 export const chatGrok = createServerFn({ method: "POST" })
-  .validator((input: { messages: GrokChatMessage[]; system?: string }) => input)
+  .validator((input: { messages: GrokChatMessage[]; system?: string; liveSearch?: boolean }) => input)
   .handler(async ({ data }): Promise<GrokChatResult> => {
     const apiKey = process.env.XAI_API_KEY;
     if (!apiKey) return { ok: false, error: "Grok is not available in this environment." };
@@ -51,6 +51,14 @@ export const chatGrok = createServerFn({ method: "POST" })
         messages,
         max_tokens: MAX_TOKENS,
         temperature: 0.5,
+        ...(data.liveSearch
+          ? {
+              search_parameters: {
+                mode: "auto",
+                return_citations: true,
+              },
+            }
+          : {}),
       }),
     });
 
