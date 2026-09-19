@@ -981,7 +981,6 @@ export function ChatPanel() {
         </div>
         <p className="mx-auto mt-2 w-full max-w-[1400px] px-1 text-[11px] text-subtle">{modelHint}</p>
       </form>
-    </div>
       {assistantUiMode ? (
         <div className="absolute inset-0 z-30 flex min-h-0 flex-col bg-background">
           <div className="flex items-center justify-between border-b border-border px-4 py-2">
@@ -1004,6 +1003,6 @@ export function ChatPanel() {
           </div>
         </div>
       ) : null}
-
+    </div>
   );
 }
