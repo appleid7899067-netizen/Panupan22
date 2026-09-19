@@ -11,6 +11,7 @@ import {
   Sparkles,
   SquareTerminal,
   Terminal,
+  GitBranch,
 } from "lucide-react";
 import { AgentList } from "@/components/agent-list";
 import { ChatPanel } from "@/components/chat-panel";
@@ -22,7 +23,8 @@ import { GrokSuperPanel } from "@/components/grok-super-panel";
 import { SandboxPanel } from "@/components/sandbox-panel";
 import { TerminalPanel } from "@/components/terminal-panel";
 import { ManusHubPanel } from "@/components/manus-hub-panel";
-import { AppsPanel } from "@/components/apps-panel";\nimport { BotFlowVisualizer } from "@/components/BotFlowVisualizer";
+import { AppsPanel } from "@/components/apps-panel";
+import { BotFlowVisualizer } from "@/components/BotFlowVisualizer";
 import { AppMark, PuterMark } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -47,7 +49,8 @@ const MODES: { id: WorkspaceMode; icon: typeof ImagePlus; color: string }[] = [
   { id: "sandbox", icon: SquareTerminal, color: "text-amber-300" },
   { id: "live", icon: Activity, color: "text-lime-300" },
   { id: "terminal", icon: Terminal, color: "text-sky-300" },
-  { id: "super", icon: Sparkles, color: "text-yellow-300" },\n  { id: "botflow", icon: GitBranch, color: "text-cyan-300" },
+  { id: "super", icon: Sparkles, color: "text-yellow-300" },
+  { id: "botflow", icon: GitBranch, color: "text-cyan-300" },
 ];
 
 export function CommandCenter() {
@@ -122,7 +125,9 @@ export function CommandCenter() {
                 ? t.modeSuper
                 : id === "manus"
                   ? t.modeManus
-                  : t.modeCommand;
+                  : id === "botflow"
+                    ? "BotFlow"
+                    : t.modeCommand;
 
   const clockText =
     mounted && now
@@ -349,6 +354,8 @@ export function CommandCenter() {
               <GrokSuperPanel />
             ) : workspaceMode === "manus" ? (
               <ManusHubPanel />
+            ) : workspaceMode === "botflow" ? (
+              <BotFlowVisualizer />
             ) : (
               <ChatPanel />
             )}
