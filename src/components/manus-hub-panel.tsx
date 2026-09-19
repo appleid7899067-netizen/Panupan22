@@ -73,6 +73,7 @@ function LiveTasks({ th, onConfigured }: { th: boolean; onConfigured?: () => voi
   const [error, setError] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [configuring, setConfiguring] = useState(false);
+  const [useBrowser, setUseBrowser] = useState(false);
 
   const load = async () => {
     setError("");
@@ -155,7 +156,7 @@ function LiveTasks({ th, onConfigured }: { th: boolean; onConfigured?: () => voi
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create", prompt: value }),
+        body: JSON.stringify({ action: "create", prompt: value, useBrowser }),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error?.message || data.error || "สร้างงานไม่สำเร็จ");
