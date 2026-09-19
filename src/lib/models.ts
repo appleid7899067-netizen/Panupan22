@@ -72,7 +72,7 @@ export function allKnownModels(): FreeModel[] {
 }
 
 export function isXaiModel(id: string | null | undefined): boolean {
-  if (!id || id === "auto") return true;
+  if (!id || id === "auto") return false;
   const known = modelById(id);
   if (known) return known.via === "xai";
   return id.startsWith("grok") && !id.includes("/");
