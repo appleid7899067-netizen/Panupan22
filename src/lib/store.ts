@@ -6,6 +6,24 @@ import type { Lang } from "@/lib/copy";
 import { uid } from "@/lib/utils";
 
 export type WorkspaceMode = "command" | "apps" | "create" | "sandbox" | "live" | "terminal" | "super" | "manus";
+
+export type SystemIdentity = {
+  productName: string;
+  ownerName: string;
+  ownerTitle: string;
+  ceoName: string;
+  ceoTitle: string;
+  version: number;
+};
+
+export const DEFAULT_SYSTEM_IDENTITY: SystemIdentity = {
+  productName: "BossnuGrok",
+  ownerName: "ภาณุพันธ์",
+  ownerTitle: "ผู้บริหารระดับสูง / เจ้าของระบบ",
+  ceoName: "สลี่ออลา",
+  ceoTitle: "CEO / ผู้ควบคุมดูแลระบบ",
+  version: 1,
+};
 export type { FlowOptions };
 
 export type ChatMessage = {
@@ -64,6 +82,8 @@ export type WorkspaceSlice = {
 };
 
 type BossState = WorkspaceSlice & {
+  setSystemIdentity: (patch: Partial<SystemIdentity>) => void;
+  resetSystemIdentity: () => void;
   hydrated: boolean;
   markHydrated: () => void;
   setLanguage: (language: Lang) => void;
