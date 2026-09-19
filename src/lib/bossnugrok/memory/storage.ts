@@ -15,6 +15,7 @@ export type MemorySuccess = {
   skillId: string;
   pattern: string;
   at: number;
+  weight?: number;
 };
 
 export type SkillMemory = {
@@ -34,8 +35,8 @@ export function loadMemory(): SkillMemory {
     if (!raw) return blank();
     const parsed = JSON.parse(raw) as SkillMemory;
     return {
-      errors: Array.isArray(parsed.errors) ? parsed.errors.slice(-80) : [],
-      successes: Array.isArray(parsed.successes) ? parsed.successes.slice(-80) : [],
+      errors: Array.isArray(parsed.errors) ? parsed.errors.slice(-200) : [],
+      successes: Array.isArray(parsed.successes) ? parsed.successes.slice(-400) : [],
       lastUpdated: parsed.lastUpdated || Date.now(),
     };
   } catch {
@@ -50,8 +51,8 @@ function save(memory: SkillMemory) {
       KEY,
       JSON.stringify({
         ...memory,
-        errors: memory.errors.slice(-80),
-        successes: memory.successes.slice(-80),
+        errors: memory.errors.slice(-200),
+        successes: memory.successes.slice(-400),
         lastUpdated: Date.now(),
       }),
     );
@@ -79,17 +80,24 @@ export function recordError(input: {
   save(memory);
 }
 
+/** Record a success. weight=10 means learn 10x from this example (used for user code). */
 export function recordSuccess(input: {
   skillId: string;
   pattern: string;
+  weight?: number;
 }) {
   const memory = loadMemory();
-  memory.successes.unshift({
-    id: `ok_${Date.now().toString(36)}`,
-    skillId: input.skillId,
-    pattern: input.pattern.slice(0, 300),
-    at: Date.now(),
-  });
+  const weight = Math.max(1, Math.min(20, input.weight ?? 1));
+  // Write multiple weighted entries so learning compounds
+  for (let i = 0; i < weight; i++) {
+    memory.successes.unshift({
+      id: `ok_${Date.now().toString(36)}_${i}`,
+      skillId: input.skillId,
+      pattern: input.pattern.slice(0, 400),
+      at: Date.now(),
+      weight,
+    });
+  }
   save(memory);
 }
 
@@ -104,7 +112,10 @@ export function getDailyInsights(): string[] {
     insights.push("ยังไม่มีบทเรียนวันนี้ — ลองรัน skill สักอัน");
     return insights;
   }
-  insights.push(`วันนี้มี error ${recentErrors.length} ครั้ง / สำเร็จ ${recentOk.length} ครั้ง`);
+  const weightedOk = recentOk.reduce((sum, s) => sum + (s.weight ?? 1), 0);
+  insights.push(
+    `วันนี้มี error ${recentErrors.length} ครั้ง / สำเร็จ ${recentOk.length} ครั้ง (น้ำหนักเรียนรู้ ≈ ${weightedOk})`,
+  );
 
   const bySkill = new Map<string, number>();
   for (const e of recentErrors) {
@@ -114,15 +125,23 @@ export function getDailyInsights(): string[] {
     insights.push(`${skill}: error ${count} ครั้ง`);
   }
 
+  // Highlight code learning
+  const codeOk = recentOk.filter((s) => s.skillId === "code-runner" || s.skillId === "code-review");
+  if (codeOk.length > 0) {
+    insights.push(`เรียนรู้จากโค้ดผู้ใช้ ${codeOk.length} ตัวอย่าง (x10)`);
+  }
+
   const topFix = recentErrors.find((e) => e.fix)?.fix;
   if (topFix) insights.push(`วิธีแก้ล่าสุด: ${topFix}`);
 
-  return insights.slice(0, 8);
+  return insights.slice(0, 10);
 }
 
 export function getSuccessRate(): number {
   const memory = loadMemory();
-  const total = memory.errors.length + memory.successes.length;
-  if (total === 0) return 0;
-  return memory.successes.length / total;
+  const ok = memory.successes.reduce((sum, s) => sum + (s.weight ?? 1), 0);
+  const bad = memory.errors.length;
+  const total = ok + bad;
+  if (total === 0) return 1;
+  return ok / total;
 }

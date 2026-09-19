@@ -1,5 +1,6 @@
 export type SkillId =
   | "code-runner"
+  | "code-review"
   | "daily-fixer"
   | "web-search"
   | "live-scores"
@@ -11,7 +12,8 @@ export type SkillId =
   | "text-to-speech"
   | "image-ocr"
   | "speech-to-text"
-  | "voice-changer";
+  | "voice-changer"
+  | "translate";
 
 export type SkillStatus = "pending" | "running" | "done" | "error" | "rejected";
 

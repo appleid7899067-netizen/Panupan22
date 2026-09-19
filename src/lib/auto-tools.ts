@@ -1,6 +1,7 @@
 /**
  * Auto tool selection for in-chat agentic replies.
  * User talks normally — system picks tools, stays in the same room.
+ * Default: prefer special skills (15 skills catalog).
  */
 import { createSkillCall, executeSkill } from "@/lib/bossnugrok/skills";
 import type { SkillCall } from "@/lib/bossnugrok/skills/skill-types";
@@ -14,9 +15,11 @@ export type AutoToolPack = {
 
 /** Only explicit “open mode” phrases should leave chat — not casual words. */
 export function isExplicitModeSwitch(command: string): boolean {
-  return /^(เปิด|ไปที่|switch\s+to|open)\s+/i.test(command.trim()) ||
-    /\b(เปิด\s*)?(โหมด\s*)?(sandbox|prompt\s*lab|สตรีมสด|เทอร์มินอล|groksuper|manus\s*hub)\b/i.test(command) &&
-      /(เปิด|ไป|switch|เข้า)/i.test(command);
+  return (
+    /^(เปิด|ไปที่|switch\s+to|open)\s+/i.test(command.trim()) ||
+    (/\b(เปิด\s*)?(โหมด\s*)?(sandbox|prompt\s*lab|สตรีมสด|เทอร์มินอล|groksuper|manus\s*hub)\b/i.test(command) &&
+      /(เปิด|ไป|switch|เข้า)/i.test(command))
+  );
 }
 
 function needsLiveData(text: string): boolean {
@@ -25,8 +28,18 @@ function needsLiveData(text: string): boolean {
   );
 }
 
+/** Detect code blocks or “run this code” intent early so code-runner is preferred. */
+function looksLikeCode(text: string): boolean {
+  return (
+    /```[\s\S]*```/.test(text) ||
+    /รันโค้ด|run code|execute this|ลองรัน|ทดสอบโค้ด/i.test(text) ||
+    /(function\s+\w+|const\s+\w+\s*=|let\s+\w+\s*=|import\s+|export\s+)/.test(text)
+  );
+}
+
 /**
  * Run whatever tools fit this user message. Never navigates workspace.
+ * Prefers special skills by default (15-skill catalog).
  */
 export async function runAutoTools(
   userText: string,
@@ -36,24 +49,37 @@ export async function runAutoTools(
   let toolText = "";
   let skillCall: SkillCall | undefined;
 
-  // 1) Explicit triggers + implicit routing. The user talks normally;
-  // the agent selects the built-in skill instead of requiring magic words.
+  // 0) Code from user → force code-runner / code-review path (learn 10x later)
   let routedText = userText;
-  if (/https?:\/\//i.test(userText) && /อ่าน|เปิด|ตรวจ|ดู|สรุป|analy[sz]e|read|open/i.test(userText)) {
+  if (looksLikeCode(userText)) {
+    if (/รีวิว|review|ตรวจโค้ด|วิจารณ์โค้ด/i.test(userText)) {
+      routedText = "รีวิวโค้ด " + userText;
+    } else {
+      routedText = "รันโค้ด " + userText;
+    }
+  } else if (/https?:\/\//i.test(userText) && /อ่าน|เปิด|ตรวจ|ดู|สรุป|analy[sz]e|read|open/i.test(userText)) {
     routedText = "อ่านลิงก์ " + userText;
   } else if (/prompt\s*lab|พรอมต์\s*แลบ|ทดลองพรอมต์|ทดสอบพรอมต์|ลอง prompt/i.test(userText)) {
     routedText = "เรียก Prompt Lab " + userText;
   } else if (/บทเรียน|เรียนรู้อะไรจาก|ความจำสกิล|skill memory|แก้พลาดอะไร|ข้อผิดพลาดที่ผ่านมา/i.test(userText)) {
     routedText = "ดูบทเรียน " + userText;
+  } else if (/แปล|translate|แปลเป็น|translate to/i.test(userText)) {
+    routedText = "แปลภาษา " + userText;
+  } else if (/สร้างภาพ|วาดภาพ|generate image|create image|ทำรูป/i.test(userText)) {
+    routedText = "สร้างภาพ " + userText;
+  } else if (/สร้างวิดีโอ|generate video|create video|ทำวิดีโอ/i.test(userText)) {
+    routedText = "สร้างวิดีโอ " + userText;
   } else if (/ค้นหา|ค้นข้อมูล|หาข้อมูล|ล่าสุด|ข่าว|ราคา|อากาศ|เว็บ|search|research/i.test(userText)) {
     routedText = "ค้นหาเว็บ " + userText;
   }
+
   const seed = createSkillCall(routedText);
   if (seed && seed.status !== "pending") {
     used.push(seed.skillId);
     const updated = await executeSkill({ ...seed, status: "running" }, onStream);
     skillCall = updated;
-    toolText = updated.streamOutput?.trim() ||
+    toolText =
+      updated.streamOutput?.trim() ||
       (updated.status === "done" ? String(updated.result ?? "") : updated.error ?? "");
     return { skillCall, toolText, used };
   }
