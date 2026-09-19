@@ -1,6 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requireUserId } from "@/lib/auth/verify.server";
-
 const MANUS_API = "https://api.manus.ai/v2";
 const MANUS_COOKIE = "boss_manus_api_key";
 
@@ -62,7 +60,6 @@ export const Route = createFileRoute("/api/manus")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        try { await requireUserId(); } catch { return json({ ok: false, error: "Unauthorized" }, 401); }
         const url = new URL(request.url);
         const action = url.searchParams.get("action") ?? "status";
         if (action === "status") {
@@ -83,7 +80,6 @@ export const Route = createFileRoute("/api/manus")({
       },
       POST: async ({ request }) => {
         if (!sameOrigin(request)) return json({ ok: false, error: "Cross-origin request blocked." }, 403);
-        try { await requireUserId(); } catch { return json({ ok: false, error: "Unauthorized" }, 401); }
         let body: { action?: string; prompt?: string; taskId?: string; apiKey?: string };
         try { body = (await request.json()) as typeof body; } catch { return json({ ok: false, error: "Invalid JSON" }, 400); }
 
