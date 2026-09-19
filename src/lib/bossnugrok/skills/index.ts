@@ -1,6 +1,7 @@
 import type { SkillCall, SkillDefinition, SkillId, SkillResult } from "./skill-types";
 import { recordError, recordSuccess, getDailyInsights, getSuccessRate, loadMemory } from "../memory/storage";
 import { fetchLiveData } from "@/lib/live-data";
+import { chatWithPuter } from "@/lib/puter-ai";
 
 export const SKILLS: SkillDefinition[] = [
   {
@@ -65,6 +66,15 @@ export const SKILLS: SkillDefinition[] = [
     needsApproval: false,
     triggers: ["อ่านเอกสาร", "สรุปเอกสาร"],
   },
+  {
+    id: "prompt-lab",
+    name: "Prompt Lab",
+    nameTh: "Prompt Lab",
+    icon: "🧪",
+    description: "Run the saved Prompt Lab system + user prompt through Puter",
+    needsApproval: false,
+    triggers: ["ใช้ prompt lab", "เรียก prompt lab", "รัน prompt lab", "run prompt lab", "use prompt lab"],
+  },
 ];
 
 export function detectSkill(input: string): SkillDefinition | null {
@@ -114,6 +124,12 @@ export function parseSkillArgs(skillId: SkillId, input: string): Record<string, 
   }
   if (skillId === "doc-reader") {
     return { text: input.slice(0, 12_000) };
+  }
+  if (skillId === "prompt-lab") {
+    const userPrompt = input
+      .replace(/ใช้ prompt lab|เรียก prompt lab|รัน prompt lab|run prompt lab|use prompt lab/gi, "")
+      .trim();
+    return { userPrompt: userPrompt || input.trim() };
   }
   return { input };
 }
