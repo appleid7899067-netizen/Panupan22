@@ -45,11 +45,35 @@ export type PuterImageOptions = {
   puter_output_path?: string;
 };
 
+export type PuterVideoOptions = {
+  model?: string;
+  provider?: string;
+  seconds?: number;
+  size?: string;
+  input_reference?: string;
+  generate_audio?: boolean;
+  test_mode?: boolean;
+  puter_output_path?: string;
+};
+
+export type PuterSpeechOptions = {
+  provider?: string;
+  model?: string;
+  voice?: string;
+  language?: string;
+  output_format?: string;
+};
+
 type PuterAiApi = {
   chat: (prompt: string | PuterChatMessage[], options?: PuterChatOptions) => Promise<unknown>;
   txt2img?: (prompt: string, options?: PuterImageOptions | boolean) => Promise<HTMLImageElement>;
-  txt2vid?: (prompt: string, options?: { model?: string; seconds?: number; size?: string; test_mode?: boolean }) => Promise<HTMLVideoElement>;
+  img2txt?: (source: string | File | Blob, options?: Record<string, unknown>) => Promise<string>;
+  txt2vid?: (prompt: string, options?: PuterVideoOptions) => Promise<HTMLVideoElement>;
+  txt2speech?: (text: string, options?: PuterSpeechOptions | boolean) => Promise<HTMLAudioElement>;
+  speech2txt?: (source: string | File | Blob, options?: Record<string, unknown>, testMode?: boolean) => Promise<unknown>;
+  speech2speech?: (source: string | File | Blob, options?: { voice?: string; model?: string; output_format?: string } | boolean) => Promise<HTMLAudioElement>;
   listModels?: (provider?: string) => Promise<unknown>;
+  listModelProviders?: () => Promise<unknown>;
 };
 
 export type PuterSDK = {
@@ -92,7 +116,7 @@ export function loadPuter(): Promise<PuterSDK> {
   if (loadPromise) return loadPromise;
 
   loadPromise = new Promise((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(`script[data-puter-sdk="v2"]`);
+    const existing = document.querySelector<HTMLScriptElement>('script[data-puter-sdk="v2"]');
     const ready = () => {
       waitForAuth()
         .then(resolve)
@@ -148,10 +172,11 @@ export async function getPuterKv(puter: PuterSDK, timeoutMs = 4_000): Promise<Pu
 export function puterErrorMessage(err: unknown): string {
   const raw = (() => {
     if (err && typeof err === "object") {
-      const record = err as { msg?: unknown; message?: unknown; error?: unknown };
+      const record = err as { msg?: unknown; message?: unknown; error?: unknown; code?: unknown };
       if (typeof record.msg === "string" && record.msg.trim()) return record.msg;
       if (typeof record.message === "string" && record.message.trim()) return record.message;
       if (typeof record.error === "string" && record.error.trim()) return record.error;
+      if (typeof record.code === "string" && record.code.trim()) return record.code;
     }
     if (err instanceof Error && err.message.trim()) return err.message;
     return "";
@@ -160,8 +185,11 @@ export function puterErrorMessage(err: unknown): string {
   if (lower.includes("usage-limited") || lower.includes("usage limit")) {
     return "Puter free-model quota is exhausted for this session. Sign in with Puter to run real models.";
   }
+  if (lower.includes("insufficient") || lower.includes("credits")) {
+    return "เครดิต Puter ไม่เพียงพอสำหรับงานนี้ หรือโมเดลนี้ต้องใช้เครดิตเพิ่ม";
+  }
   if (lower.includes("not signed") || lower.includes("auth")) {
     return "Sign in with Puter to use models. Allow popups, then retry.";
   }
-  return raw || "Sign-in was cancelled or blocked. Allow popups for this site, then try again.";
+  return raw || "งานไม่สำเร็จ ลองอีกครั้ง";
 }
