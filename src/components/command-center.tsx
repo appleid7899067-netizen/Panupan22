@@ -101,7 +101,9 @@ export function CommandCenter() {
           : null;
 
   const modeLabel = (id: WorkspaceMode) =>
-    id === "apps"\n      ? (language === "th" ? "แอพ" : "Apps")\n      : id === "create"
+    id === "apps"
+      ? (language === "th" ? "แอพ" : "Apps")
+      : id === "create"
       ? t.modeCreate
       : id === "sandbox"
         ? t.modeSandbox
@@ -313,7 +315,9 @@ export function CommandCenter() {
 
         <main className="flex min-h-0 flex-col">
           <div className="min-h-0 flex-1">
-            {workspaceMode === "apps" ? (\n              <AppsPanel />\n            ) : workspaceMode === "create" ? (
+            {workspaceMode === "apps" ? (
+              <AppsPanel />
+            ) : workspaceMode === "create" ? (
               <CreatePanel />
             ) : workspaceMode === "sandbox" ? (
               <SandboxPanel />
