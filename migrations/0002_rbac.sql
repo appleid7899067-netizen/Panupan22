@@ -6,6 +6,6 @@ alter table "user"
 
 alter table "user"
   add constraint "user_role_check"
-  check ("role" in ('OWNER', 'ADMIN', 'USER'));
+  check ("role" in ('OWNER', 'CEO', 'ADMIN', 'USER'));
 
 create index if not exists "user_role_idx" on "user" ("role");
