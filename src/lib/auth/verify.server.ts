@@ -42,23 +42,7 @@ export class UnauthorizedError extends Error {
   }
 }
 
-export type AppRole = "OWNER" | "ADMIN" | "USER";
-
-const csv = (value: string | undefined): string[] =>
-  (value ?? "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
-
-/** Resolve role only from server-controlled configuration + persisted role. */
-export function resolveAppRole(user: { email?: string | null; role?: string | null }): AppRole {
-  const email = user.email?.trim().toLowerCase() ?? "";
-  const ownerEmail = process.env.BOSS_OWNER_EMAIL?.trim().toLowerCase();
-  const adminEmails = csv(process.env.BOSS_ADMIN_EMAILS);
-  if (ownerEmail && email === ownerEmail) return "OWNER";
-  if (adminEmails.includes(email)) return "ADMIN";
-  if (user.role === "OWNER" || user.role === "ADMIN") return user.role;
-  return "USER";
-}
-
-export type VerifiedUser = { id: string; email: string | null; role: AppRole };
+export type VerifiedUser = { id: string; email: string | null };
 
 /**
  * Resolve the signed-in user from the current request, or `null` when auth isn't
@@ -83,11 +67,7 @@ export async function getSessionUser(
   }
   const session = await auth.api.getSession({ headers });
   if (!session?.user) return null;
-  return {
-    id: session.user.id,
-    email: session.user.email ?? null,
-    role: resolveAppRole(session.user),
-  };
+  return { id: session.user.id, email: session.user.email ?? null };
 }
 
 /**

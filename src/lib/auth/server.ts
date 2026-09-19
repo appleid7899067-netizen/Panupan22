@@ -210,20 +210,6 @@ export const auth = betterAuth({
   // flicker-prevention guidance (gate on `isPending`; SSR the session).
   session: { cookieCache: { enabled: true, maxAge: 300 } },
 
-  // Application RBAC role is server-owned. It is never accepted from the client.
-  // Existing users default to USER; OWNER/ADMIN can only be provisioned from
-  // server environment allowlists below.
-  user: {
-    additionalFields: {
-      role: {
-        type: "string",
-        required: true,
-        defaultValue: "USER",
-        input: false,
-      },
-    },
-  },
-
   // Local email/password — toggled only via `./email-password` (not a plugin).
   ...(emailAndPasswordEnabled ? { emailAndPassword: { enabled: true } } : {}),
 
