@@ -151,7 +151,9 @@ export function ChatPanel() {
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem("boss-chat-theme", chatTheme);
+    try {
+      window.localStorage.setItem("boss-chat-theme", chatTheme);
+    } catch {}
   }, [chatTheme]);
 
   useEffect(() => {
