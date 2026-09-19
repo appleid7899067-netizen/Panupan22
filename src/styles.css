@@ -219,3 +219,55 @@
     transparent 70%
   );
 }
+
+
+/* Chat room color themes */
+.chat-room {
+  --chat-bg: #0f0d14;
+  --chat-accent: #c4a7ff;
+  --chat-accent-soft: rgba(196, 167, 255, 0.10);
+  background: var(--chat-bg);
+  transition: background-color 220ms ease, color 220ms ease;
+}
+.chat-room[data-chat-theme="lavender"] { --chat-bg: #100d18; --chat-accent: #c7b0ff; --chat-accent-soft: rgba(199, 176, 255, 0.11); }
+.chat-room[data-chat-theme="pink"] { --chat-bg: #180e15; --chat-accent: #ff9fc8; --chat-accent-soft: rgba(255, 159, 200, 0.11); }
+.chat-room[data-chat-theme="blue"] { --chat-bg: #0c141d; --chat-accent: #8ecbff; --chat-accent-soft: rgba(142, 203, 255, 0.11); }
+.chat-room[data-chat-theme="mint"] { --chat-bg: #0b1714; --chat-accent: #8fe3c0; --chat-accent-soft: rgba(143, 227, 192, 0.11); }
+.chat-room[data-chat-theme="peach"] { --chat-bg: #19110d; --chat-accent: #ffc09a; --chat-accent-soft: rgba(255, 192, 154, 0.11); }
+
+.chat-theme-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--chat-bg) 82%, transparent);
+}
+.chat-theme-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.16);
+  opacity: 0.72;
+  transition: transform 150ms ease, opacity 150ms ease, box-shadow 150ms ease;
+}
+.chat-theme-swatch:hover { opacity: 1; transform: scale(1.08); }
+.chat-theme-swatch.is-active { opacity: 1; transform: scale(1.08); box-shadow: 0 0 0 2px var(--chat-bg), 0 0 0 3px var(--chat-accent); }
+.chat-theme-swatch-lavender { background: #c7b0ff; }
+.chat-theme-swatch-pink { background: #ff9fc8; }
+.chat-theme-swatch-blue { background: #8ecbff; }
+.chat-theme-swatch-mint { background: #8fe3c0; }
+.chat-theme-swatch-peach { background: #ffc09a; }
+
+.chat-room .bg-card { background-color: color-mix(in oklab, var(--chat-bg) 78%, white 4%); }
+.chat-room .bg-secondary { background-color: color-mix(in oklab, var(--chat-bg) 72%, white 6%); }
+.chat-room .bg-primary { background-color: var(--chat-accent); color: #17131d; }
+.chat-room .text-primary-foreground { color: #17131d; }
+.chat-room .border-border { border-color: color-mix(in oklab, var(--chat-accent) 13%, transparent); }
+.chat-room .border-border\/70 { border-color: color-mix(in oklab, var(--chat-accent) 10%, transparent); }
+
+@media (max-width: 640px) {
+  .chat-theme-picker { gap: 3px; }
+  .chat-theme-swatch { width: 15px; height: 15px; }
+}
