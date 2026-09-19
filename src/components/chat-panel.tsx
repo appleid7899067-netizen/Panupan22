@@ -31,6 +31,7 @@ type ApprovalRequest = { conversationId: string; messageId: string; command: str
 const beat = () => new Promise((r) => setTimeout(r, 70));
 
 const paintTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const pendingPaints = new Map<string, { conversationId: string; messageId: string; patch: Partial<ChatMessage> }>();
 
 function paintFlow(
   conversationId: string,
@@ -45,22 +46,28 @@ function paintFlow(
   };
   const key = "$" + "{conversationId}:$" + "{messageId}";
 
-  // Streaming emits many updates per second. Persisting the whole workspace
-  // for every token causes visible jank, especially on mobile.
+  // Keep only the newest frame. This reduces persisted Zustand writes without
+  // making the activity display lag behind the stream.
   if (!pending) {
     const timer = paintTimers.get(key);
     if (timer) clearTimeout(timer);
     paintTimers.delete(key);
+    pendingPaints.delete(key);
     useBossStore.getState().patchMessage(conversationId, messageId, patch);
     return;
   }
 
+  pendingPaints.set(key, { conversationId, messageId, patch });
   if (paintTimers.has(key)) return;
+
   paintTimers.set(
     key,
     setTimeout(() => {
       paintTimers.delete(key);
-      useBossStore.getState().patchMessage(conversationId, messageId, patch);
+      const latest = pendingPaints.get(key);
+      if (!latest) return;
+      pendingPaints.delete(key);
+      useBossStore.getState().patchMessage(latest.conversationId, latest.messageId, latest.patch);
     }, 120),
   );
 }
