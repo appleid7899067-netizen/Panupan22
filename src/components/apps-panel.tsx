@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, Bot, Box, Code2, FileText, Globe2, Image, LayoutGrid, Search, Sparkles, Wrench, Zap } from "lucide-react";
 import { useBossStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { PLUGIN_CATALOG } from "@/lib/bossnugrok/plugin-catalog";
 
 type AppItem = {
   id: string; name: string; description: string; category: string; icon: typeof Bot;
@@ -26,6 +27,7 @@ export function AppsPanel() {
   const categories=useMemo(()=>["all",...Array.from(new Set(APPS.map(a=>a.category)))],[]);
   const filtered=useMemo(()=>APPS.filter(a=>{const q=query.trim().toLowerCase();return(!q||[a.name,a.description,a.category,...a.capabilities,...a.skills,...a.tools].join(" ").toLowerCase().includes(q))&&(category==="all"||a.category===category)}),[query,category]);
   const detail=selected?APPS.find(a=>a.id===selected):null;
+  const plugins = PLUGIN_CATALOG;
 
   if(detail){const Icon=detail.icon;return <div className="flex h-full min-h-0 flex-col overflow-y-auto">
     <header className="border-b border-border px-4 py-4 sm:px-6">
