@@ -4,7 +4,8 @@ export type SkillId =
   | "web-search"
   | "live-scores"
   | "link-follower"
-  | "doc-reader";
+  | "doc-reader"
+  | "prompt-lab";
 
 export type SkillStatus = "pending" | "running" | "done" | "error" | "rejected";
 
