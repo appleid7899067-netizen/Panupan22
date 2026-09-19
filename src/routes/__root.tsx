@@ -3,6 +3,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { APP_DESCRIPTION, APP_NAME, APP_THEME_COLOR } from "@/lib/brand";
 import appCss from "../styles.css?url";
+import streamingCss from "../styles/streaming.css?url";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -24,6 +25,7 @@ export const Route = createRootRoute({
         href: "https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Syne:wght@500;600;700&display=swap",
       },
       { rel: "stylesheet", href: appCss },
+      { rel: "stylesheet", href: streamingCss },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
     ],
