@@ -116,6 +116,7 @@ export function ChatPanel() {
   const [liveSearch, setLiveSearch] = useState(false);
   const [remoteModels, setRemoteModels] = useState<FreeModel[]>([]);
   const [approval, setApproval] = useState<ApprovalRequest | null>(null);
+  const [chatTheme, setChatTheme] = useState("lavender");
   const scroller = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -141,6 +142,15 @@ export function ChatPanel() {
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [convo?.messages.length, busy, agent?.id, convo?.messages[convo.messages.length - 1]?.content]);
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("boss-chat-theme");
+    if (saved && ["lavender", "pink", "blue", "mint", "peach"].includes(saved)) setChatTheme(saved);
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("boss-chat-theme", chatTheme);
+  }, [chatTheme]);
 
   useEffect(() => {
     if (!signedIn) return;
@@ -521,7 +531,7 @@ export function ChatPanel() {
   if (!agent) return null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="chat-room flex h-full min-h-0 flex-col" data-chat-theme={chatTheme}>
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-[12px] border border-border bg-secondary">
@@ -549,6 +559,20 @@ export function ChatPanel() {
               </option>
             ))}
           </select>
+          <div className="chat-theme-picker" role="group" aria-label={language === "th" ? "เลือกโทนสีห้องแชท" : "Choose chat theme"}>
+            {["lavender", "pink", "blue", "mint", "peach"].map((theme) => (
+              <button
+                key={theme}
+                type="button"
+                className={cn("chat-theme-swatch", `chat-theme-swatch-${theme}`, chatTheme === theme && "is-active")}
+                onClick={() => setChatTheme(theme)}
+                aria-label={theme}
+                aria-pressed={chatTheme === theme}
+                title={theme === "lavender" ? "ม่วงอ่อน" : theme === "pink" ? "ชมพู" : theme === "blue" ? "ฟ้า" : theme === "mint" ? "มิ้นท์" : "พีช"}
+              />
+            ))}
+          </div>
+
           <Button
             type="button"
             variant="ghost"
