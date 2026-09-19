@@ -283,7 +283,7 @@ export function ChatPanel() {
         flow.event(language === "th" ? "กำลังประมวลผล" : "Processing", "warning", "zap");
         paintFlow(id, assistantId, flow, { skillCall: skillPatch });
 
-        if (isXaiModel(modelMode)) {
+        if (modelMode !== "auto" && isXaiModel(modelMode)) {
           const result = await chatGrok({ data: { messages: modelHistory, system } });
           if (!result.ok) throw new Error(result.error);
           const full = result.text;
@@ -318,7 +318,7 @@ export function ChatPanel() {
         } else {
           const result = await chatWithPuter({
             messages: [{ role: "system", content: system }, ...modelHistory],
-            pinnedModel: modelMode,
+            pinnedModel: modelMode === "auto" ? null : modelMode,
             preferTestMode: false,
             onDelta: (next) =>
               paintFlow(id, assistantId, flow, { content: next, skillCall: skillPatch }),
@@ -536,7 +536,7 @@ export function ChatPanel() {
               <BotVisualizer
                 status="running"
                 skill="web-search"
-                model={shortModelLabel(lastModelId) || "Grok 4.5"}
+                model={modelMode === "auto" ? "Puter" : shortModelLabel(lastModelId) || shortModelLabel(modelMode)}
                 progress={42}
                 steps={demoSteps}
                 events={[
