@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ROLE_META, roleLabel } from "@/lib/agents";
 import { COPY } from "@/lib/copy";
 import { useBossStore } from "@/lib/store";
@@ -13,6 +14,11 @@ export function AgentList({ onSelect }: { onSelect?: () => void }) {
   const t = COPY[language];
   const specialists = agents.filter((a) => !a.pinned);
   const core = agents.filter((a) => a.pinned);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -54,7 +60,9 @@ export function AgentList({ onSelect }: { onSelect?: () => void }) {
                     </span>
                   </span>
                   <span className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{agent.task}</span>
-                  <span className="mt-1 block text-[11px] text-subtle">{relativeTime(agent.createdAt, language)}</span>
+                  <span className="mt-1 block text-[11px] text-subtle" suppressHydrationWarning>
+                    {mounted ? relativeTime(agent.createdAt, language) : "\u00a0"}
+                  </span>
                 </span>
               </button>
               {selected && !agent.pinned ? (

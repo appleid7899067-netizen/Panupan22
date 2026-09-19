@@ -106,7 +106,8 @@ type BossState = WorkspaceSlice & {
 
 function withCore(agents: AgentRecord[]): AgentRecord[] {
   if (agents.some((a) => a.id === CORE_BOSS.id)) return agents;
-  return [{ ...CORE_BOSS, createdAt: Date.now() }, ...agents];
+  // Keep CORE_BOSS.createdAt stable (0) so SSR and client match
+  return [{ ...CORE_BOSS }, ...agents];
 }
 
 function blankConversation(agentId: string): Conversation {
@@ -122,7 +123,8 @@ function blankConversation(agentId: string): Conversation {
 }
 
 const emptySlice: WorkspaceSlice = {
-  agents: [{ ...CORE_BOSS, createdAt: Date.now() }],
+  // Use stable CORE_BOSS.createdAt — do not stamp Date.now() at module load
+  agents: [{ ...CORE_BOSS }],
   conversations: [],
   activeAgentId: CORE_BOSS.id,
   language: "th",
@@ -265,6 +267,17 @@ export const useBossStore = create<BossState>()(
             state.activeAgentId = CORE_BOSS.id;
           }
           state.flowOptions = { ...DEFAULT_FLOW_OPTIONS, ...state.flowOptions };
+          // Clear any half-finished pending assistant bubbles left from a crashed run
+          state.conversations = state.conversations.map((c) => ({
+            ...c,
+            messages: c.messages
+              .filter((m) => !(m.role === "assistant" && m.pending))
+              .map((m) => ({
+                ...m,
+                pending: false,
+                progress: m.pending ? undefined : m.progress,
+              })),
+          }));
         }
         state?.markHydrated();
       },
