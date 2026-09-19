@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./styles/bot-visual.css";
 
 :root {
   --bg: #0a0b0d;

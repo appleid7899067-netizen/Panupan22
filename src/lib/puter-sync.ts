@@ -1,4 +1,5 @@
 import { CORE_BOSS } from "@/lib/agents";
+import { DEFAULT_FLOW_OPTIONS } from "@/lib/bot-flow";
 import { getPuterKv, type PuterSDK } from "@/lib/puter";
 import { useBossStore, type Conversation, type WorkspaceSlice } from "@/lib/store";
 
@@ -30,6 +31,7 @@ export function snapshotWorkspace(): WorkspaceSlice {
     workspaceMode: state.workspaceMode,
     sandboxCode: state.sandboxCode,
     creates: state.creates.slice(0, 12),
+    flowOptions: state.flowOptions ?? DEFAULT_FLOW_OPTIONS,
   };
 }
 
@@ -83,5 +85,6 @@ export function applyWorkspace(snap: WorkspaceSlice) {
     workspaceMode: snap.workspaceMode === "create" || snap.workspaceMode === "sandbox" ? snap.workspaceMode : "command",
     sandboxCode: snap.sandboxCode || "",
     creates: Array.isArray(snap.creates) ? snap.creates.slice(0, 12) : [],
+    flowOptions: snap.flowOptions ?? DEFAULT_FLOW_OPTIONS,
   });
 }

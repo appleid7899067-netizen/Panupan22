@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEven
 import { ArrowUp, Eraser, Paperclip, X } from "lucide-react";
 import { Markdown } from "@/components/markdown";
 import { ApprovalCard } from "@/components/ApprovalCard";
+import { BotFlowOptions } from "@/components/BotFlowOptions";
+import { BotVisualizer } from "@/components/BotVisualizer";
 import { SkillCallCard } from "@/components/SkillCallCard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,17 +11,33 @@ import { generateSystemPrompt, ROLE_META, roleLabel } from "@/lib/agents";
 import { executeSkill } from "@/lib/bossnugrok/skills";
 import { isExplicitModeSwitch, runAutoTools, toolContextForModel } from "@/lib/auto-tools";
 import type { SkillCall } from "@/lib/bossnugrok/skills/skill-types";
+import { LiveFlow, snapshotToPatch, createDefaultFlow } from "@/lib/bot-flow";
 import { COPY } from "@/lib/copy";
 import { chatGrok } from "@/lib/grok";
 import { allKnownModels, isXaiModel, shortModelLabel, type FreeModel } from "@/lib/models";
 import { chatWithPuter, listPuterModels } from "@/lib/puter-ai";
 import { usePuterAuth } from "@/lib/puter-auth";
-import { useBossStore } from "@/lib/store";
+import { useBossStore, type ChatMessage } from "@/lib/store";
 import { needsApproval } from "@/lib/chat-guards";
 import { cn, uid } from "@/lib/utils";
 
 type LocalFile = { name: string; mime: string; text: string };
 type ApprovalRequest = { conversationId: string; messageId: string; command: string };
+
+const beat = () => new Promise((r) => setTimeout(r, 70));
+
+function paintFlow(
+  conversationId: string,
+  messageId: string,
+  flow: LiveFlow,
+  extra: Partial<ChatMessage> = {},
+  pending = true,
+) {
+  useBossStore.getState().patchMessage(conversationId, messageId, {
+    ...snapshotToPatch(flow.snapshot(pending)),
+    ...extra,
+  });
+}
 
 function routeWorkspaceCommand(command: string, setWorkspaceMode: (mode: "command" | "create" | "sandbox" | "live" | "terminal" | "super" | "manus") => void) {
   const value = command.toLowerCase();
@@ -72,6 +90,7 @@ export function ChatPanel() {
   const setWorkspaceMode = useBossStore((s) => s.setWorkspaceMode);
   const setSandboxCode = useBossStore((s) => s.setSandboxCode);
   const hydrated = useBossStore((s) => s.hydrated);
+  const flowOptions = useBossStore((s) => s.flowOptions);
 
   const agent = agents.find((a) => a.id === activeAgentId) ?? agents[0];
   const convo = conversations.find((c) => c.agentId === agent?.id);
@@ -161,12 +180,26 @@ export function ChatPanel() {
       }
 
       // Same room: auto tools → model answer in one bubble
+      const flow = new LiveFlow(language);
       appendMessage(id, {
         id: assistantId,
         role: "assistant",
         content: language === "th" ? "กำลังคิด…" : "Thinking…",
         createdAt: Date.now(),
+        ...snapshotToPatch(flow.snapshot(true)),
       });
+      flow.start("receive");
+      paintFlow(id, assistantId, flow);
+      await beat();
+      flow.complete("receive");
+      flow.start("guards");
+      flow.event(language === "th" ? "Guards ตรวจสอบ" : "Guards checked", "success", "shield");
+      paintFlow(id, assistantId, flow);
+      await beat();
+      flow.complete("guards");
+      const skillStep = flow.steps[2]?.id ?? "skill";
+      flow.start(skillStep);
+      paintFlow(id, assistantId, flow);
 
       const toolPack = await runAutoTools(payload, (chunk) => {
         const prev = useBossStore.getState().conversations.find((c) => c.id === id);
@@ -174,6 +207,7 @@ export function ChatPanel() {
         const so = (msg?.skillCall?.streamOutput ?? "") + chunk;
         if (so) {
           patchMessage(id, assistantId, {
+            ...snapshotToPatch(flow.snapshot(true)),
             skillCall: {
               id: msg?.skillCall?.id ?? `auto_${Date.now().toString(36)}`,
               skillId: (msg?.skillCall?.skillId as SkillCall["skillId"]) ?? "web-search",
@@ -184,6 +218,18 @@ export function ChatPanel() {
           });
         }
       });
+
+      if (toolPack.skillCall) {
+        flow.complete(skillStep, toolPack.skillCall.skillId);
+        flow.event(
+          language === "th" ? `เลือก ${toolPack.skillCall.skillId}` : `Selected ${toolPack.skillCall.skillId}`,
+          "info",
+          "target",
+        );
+      } else {
+        flow.complete(skillStep, language === "th" ? "สนทนาทั่วไป" : "Direct chat");
+        flow.event(language === "th" ? "ไม่ใช้ทักษะพิเศษ" : "No extra skill", "info", "target");
+      }
 
       const toolCtx = toolContextForModel(toolPack, language === "th" ? "th" : "en");
 
@@ -221,54 +267,95 @@ export function ChatPanel() {
             }
           : undefined;
 
+        flow.start("model", modelMode === "auto" ? "auto" : modelMode);
+        flow.event(
+          language === "th" ? `เรียก ${shortModelLabel(modelMode === "auto" ? lastModelId : modelMode)}` : `Call ${shortModelLabel(modelMode === "auto" ? lastModelId : modelMode)}`,
+          "info",
+          "bot",
+        );
+        paintFlow(id, assistantId, flow, { skillCall: skillPatch });
+        await beat();
+        flow.complete("model", modelMode);
+        flow.start("process");
+        flow.event(language === "th" ? "กำลังประมวลผล" : "Processing", "warning", "zap");
+        paintFlow(id, assistantId, flow, { skillCall: skillPatch });
+
         if (isXaiModel(modelMode)) {
           const result = await chatGrok({ data: { messages: modelHistory, system } });
           if (!result.ok) throw new Error(result.error);
           const full = result.text;
           const step = Math.max(12, Math.floor(full.length / 40));
+          flow.complete("process");
+          flow.start("render");
           for (let i = 0; i < full.length; i += step) {
             const shown = full.slice(0, Math.min(full.length, i + step));
-            patchMessage(id, assistantId, { content: shown, model: result.model, skillCall: skillPatch });
+            paintFlow(id, assistantId, flow, { content: shown, model: result.model, skillCall: skillPatch });
             await new Promise((r) => setTimeout(r, 16));
           }
-          patchMessage(id, assistantId, {
-            content: full,
-            model: result.model,
-            skillCall: skillPatch ? { ...skillPatch, status: "done" } : undefined,
-          });
+          flow.complete("render");
+          flow.finishAll(true);
+          paintFlow(
+            id,
+            assistantId,
+            flow,
+            {
+              content: full,
+              model: result.model,
+              skillCall: skillPatch ? { ...skillPatch, status: "done" } : undefined,
+            },
+            false,
+          );
           setLastModelId(result.model);
         } else {
           const result = await chatWithPuter({
             messages: [{ role: "system", content: system }, ...modelHistory],
             pinnedModel: modelMode,
             preferTestMode: false,
-            onDelta: (next) => patchMessage(id, assistantId, { content: next, skillCall: skillPatch }),
+            onDelta: (next) =>
+              paintFlow(id, assistantId, flow, { content: next, skillCall: skillPatch }),
           });
-          patchMessage(id, assistantId, {
-            content: result.text,
-            model: result.model.id,
-            skillCall: skillPatch ? { ...skillPatch, status: "done" } : undefined,
-          });
+          flow.complete("process");
+          flow.complete("render");
+          flow.finishAll(true);
+          paintFlow(
+            id,
+            assistantId,
+            flow,
+            {
+              content: result.text,
+              model: result.model.id,
+              skillCall: skillPatch ? { ...skillPatch, status: "done" } : undefined,
+            },
+            false,
+          );
           setLastModelId(result.model.id);
         }
       } catch (err) {
         const raw = err instanceof Error ? err.message : t.noModels;
+        flow.fail("process", raw);
+        flow.finishAll(false);
         if (toolPack.toolText) {
-          patchMessage(id, assistantId, {
-            content: toolPack.toolText,
-            skillCall: toolPack.skillCall
-              ? {
-                  id: toolPack.skillCall.id,
-                  skillId: toolPack.skillCall.skillId,
-                  status: "done",
-                  args: toolPack.skillCall.args,
-                  streamOutput: toolPack.skillCall.streamOutput,
-                }
-              : undefined,
-          });
+          paintFlow(
+            id,
+            assistantId,
+            flow,
+            {
+              content: toolPack.toolText,
+              skillCall: toolPack.skillCall
+                ? {
+                    id: toolPack.skillCall.id,
+                    skillId: toolPack.skillCall.skillId,
+                    status: "done",
+                    args: toolPack.skillCall.args,
+                    streamOutput: toolPack.skillCall.streamOutput,
+                  }
+                : undefined,
+            },
+            false,
+          );
         } else {
           const quota = /quota|usage-limited|usage limit/i.test(raw);
-          patchMessage(id, assistantId, { content: quota ? t.quota : raw });
+          paintFlow(id, assistantId, flow, { content: quota ? t.quota : raw }, false);
         }
       } finally {
         setBusy(false);
@@ -284,7 +371,22 @@ export function ChatPanel() {
       return;
     }
 
-    appendMessage(id, { id: assistantId, role: "assistant", content: "", createdAt: Date.now() });
+    const flow = new LiveFlow(language);
+    appendMessage(id, {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      createdAt: Date.now(),
+      ...snapshotToPatch(flow.snapshot(true)),
+    });
+    flow.start("receive");
+    await beat();
+    flow.complete("receive");
+    flow.complete("guards");
+    flow.complete(flow.steps[2]?.id ?? "skill");
+    flow.start("model");
+    flow.start("process");
+    paintFlow(id, assistantId, flow);
     try {
       const history = (useBossStore.getState().conversations.find((c) => c.id === id)?.messages ?? [])
         .filter((m) => m.content.length > 0)
@@ -296,27 +398,38 @@ export function ChatPanel() {
         if (!result.ok) throw new Error(result.error);
         const full = result.text;
         const step = Math.max(12, Math.floor(full.length / 40));
+        flow.complete("model", result.model);
+        flow.complete("process");
+        flow.start("render");
         for (let i = 0; i < full.length; i += step) {
           const shown = full.slice(0, Math.min(full.length, i + step));
-          patchMessage(id, assistantId, { content: shown, model: result.model });
+          paintFlow(id, assistantId, flow, { content: shown, model: result.model });
           await new Promise((r) => setTimeout(r, 16));
         }
-        patchMessage(id, assistantId, { content: full, model: result.model });
+        flow.complete("render");
+        flow.finishAll(true);
+        paintFlow(id, assistantId, flow, { content: full, model: result.model }, false);
         setLastModelId(result.model);
       } else {
         const result = await chatWithPuter({
           messages: [{ role: "system", content: system }, ...history],
           pinnedModel: modelMode,
           preferTestMode: false,
-          onDelta: (next) => patchMessage(id, assistantId, { content: next }),
+          onDelta: (next) => paintFlow(id, assistantId, flow, { content: next }),
         });
-        patchMessage(id, assistantId, { content: result.text, model: result.model.id });
+        flow.complete("model", result.model.id);
+        flow.complete("process");
+        flow.complete("render");
+        flow.finishAll(true);
+        paintFlow(id, assistantId, flow, { content: result.text, model: result.model.id }, false);
         setLastModelId(result.model.id);
       }
     } catch (err) {
       const raw = err instanceof Error ? err.message : t.noModels;
       const quota = /quota|usage-limited|usage limit/i.test(raw);
-      patchMessage(id, assistantId, { content: quota ? t.quota : raw });
+      flow.fail("process", raw);
+      flow.finishAll(false);
+      paintFlow(id, assistantId, flow, { content: quota ? t.quota : raw }, false);
     } finally {
       setBusy(false);
     }
@@ -338,6 +451,14 @@ export function ChatPanel() {
   const modelHint =
     modelMode === "auto" ? `${t.auto} · ${shortModelLabel(lastModelId)}` : shortModelLabel(modelMode);
   const suggestions = useMemo(() => [t.suggest1, t.suggest2], [t]);
+  const demoSteps = useMemo(() => {
+    return createDefaultFlow(language).map((s, i) => ({
+      ...s,
+      status: (i < 2 ? "done" : i === 2 ? "running" : "pending") as "done" | "running" | "pending",
+      duration: i < 2 ? [5, 2][i] : undefined,
+    }));
+  }, [language]);
+  const thinkingText = language === "th" ? "กำลังคิด…" : "Thinking…";
 
   if (!agent) return null;
 
@@ -373,6 +494,7 @@ export function ChatPanel() {
           <Button variant="ghost" size="icon" className="size-9" onClick={() => clearConversation(agent.id)} aria-label={t.newChat}>
             <Eraser className="size-4" />
           </Button>
+          <BotFlowOptions />
         </div>
       </div>
 
@@ -395,6 +517,30 @@ export function ChatPanel() {
                 </button>
               ))}
             </div>
+            <div className="w-full">
+              <p className="mb-2 text-[11px] uppercase tracking-wider text-subtle">{t.flowHint}</p>
+              <BotVisualizer
+                status="running"
+                skill="web-search"
+                model={shortModelLabel(lastModelId) || "Grok 4.5"}
+                progress={42}
+                steps={demoSteps}
+                events={[
+                  { id: "d1", time: "00:00", label: language === "th" ? "ผู้ใช้ส่งข้อความ" : "User sent a message", icon: "user", type: "info" },
+                  { id: "d2", time: "00:01", label: language === "th" ? "Guards ตรวจสอบ" : "Guards checked", icon: "shield", type: "success" },
+                  { id: "d3", time: "00:02", label: language === "th" ? "เลือกทักษะ" : "Skill selected", icon: "target", type: "info" },
+                ]}
+                showFlow={flowOptions.showFlow}
+                showTimeline={flowOptions.showTimeline}
+                showProgress={flowOptions.showProgress}
+                showStatus={flowOptions.showStatus}
+                compact={flowOptions.compact}
+                layout={flowOptions.layout}
+                title={t.flowTitle}
+                progressLabel={t.flowProgress}
+                timelineTitle={t.flowTimeline}
+              />
+            </div>
           </div>
         ) : (
           <div className="mx-auto flex max-w-2xl flex-col gap-5">
@@ -408,11 +554,47 @@ export function ChatPanel() {
                       : "rounded-bl-[8px] border border-border bg-card",
                   )}
                 >
-                  {msg.role === "assistant" && !msg.content && busy ? (
-                    <p className="boss-shimmer text-sm">{t.thinking}</p>
-                  ) : msg.role === "assistant" ? (
+                  {msg.role === "assistant" ? (
                     <>
-                      <Markdown text={msg.content} />
+                      {(msg.pending || (msg.flowSteps && msg.flowSteps.length > 0)) &&
+                      (flowOptions.showFlow ||
+                        flowOptions.showTimeline ||
+                        flowOptions.showProgress ||
+                        flowOptions.showStatus) ? (
+                        <div className={msg.content && msg.content !== thinkingText ? "mb-3" : undefined}>
+                          <BotVisualizer
+                            status={
+                              msg.pending
+                                ? "running"
+                                : msg.skillCall?.status === "error"
+                                  ? "error"
+                                  : "done"
+                            }
+                            skill={msg.skillCall?.skillId}
+                            model={msg.model ? shortModelLabel(msg.model) : undefined}
+                            progress={msg.progress ?? 0}
+                            duration={msg.durationMs}
+                            steps={msg.flowSteps}
+                            events={msg.flowEvents}
+                            showFlow={flowOptions.showFlow}
+                            showTimeline={flowOptions.showTimeline}
+                            showProgress={flowOptions.showProgress && !!msg.pending}
+                            showStatus={flowOptions.showStatus}
+                            compact={flowOptions.compact || !msg.pending}
+                            layout={flowOptions.layout}
+                            title={t.flowTitle}
+                            progressLabel={t.flowProgress}
+                            timelineTitle={t.flowTimeline}
+                          />
+                        </div>
+                      ) : null}
+                      {msg.pending && (!msg.content || msg.content === thinkingText) ? (
+                        busy ? <p className="boss-shimmer text-sm">{t.thinking}</p> : null
+                      ) : msg.content ? (
+                        <Markdown text={msg.content} />
+                      ) : busy ? (
+                        <p className="boss-shimmer text-sm">{t.thinking}</p>
+                      ) : null}
                       {msg.skillCall ? (
                         <div className="mt-3">
                           <SkillCallCard

@@ -31,6 +31,21 @@ Agents: [`.github/agents/`](.github/agents/) · Skills: [`.github/skills/`](.git
 
 ---
 
+## BotFlow visualizer
+
+Every chat reply shows the bot pipeline live: receive → guards → skill → model → process → render.
+
+| View | What it is |
+|---|---|
+| Flow | Step chart with running / done / error |
+| Timeline | Clocked events as the bot works |
+| Progress | Percent while processing |
+| Status | LIVE · skill · model · duration |
+
+Toggle views from the branch icon in the chat header: stack or rail layout, compact density, and each panel on/off.
+
+---
+
 ## 📸 Preview
 
 <p align="center">
@@ -95,6 +110,7 @@ Located in [`src/lib/bossnugrok/`](src/lib/bossnugrok/):
 |---------------------------|--------------------------------------------------|
 | **Mistral Workflows**     | Multi-step AI pipelines                          |
 | **Agent Factory**         | Spawn & manage agents with 6 default roles       |
+| **BotFlow Visualizer**    | Live flow + timeline + progress + status in chat |
 | **Sandbox Runtime**       | Execute code in 11+ languages safely             |
 | **Vibe Work**             | Team atmosphere & collaboration dynamics         |
 | **Skill Booster**         | XP / Level / Learning system for agents          |

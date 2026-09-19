@@ -1,10 +1,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { CORE_BOSS, makeAgentId, type AgentRecord, type AgentRole } from "@/lib/agents";
+import { DEFAULT_FLOW_OPTIONS, type FlowOptions, type FlowStep, type TimelineEvent } from "@/lib/bot-flow";
 import type { Lang } from "@/lib/copy";
 import { uid } from "@/lib/utils";
 
 export type WorkspaceMode = "command" | "create" | "sandbox" | "live" | "terminal" | "super" | "manus";
+export type { FlowOptions };
 
 export type ChatMessage = {
   id: string;
@@ -24,6 +26,11 @@ export type ChatMessage = {
     error?: string;
     duration?: number;
   };
+  pending?: boolean;
+  progress?: number;
+  flowSteps?: FlowStep[];
+  flowEvents?: TimelineEvent[];
+  durationMs?: number;
 };
 
 export type CreatedImage = {
@@ -52,6 +59,7 @@ export type WorkspaceSlice = {
   workspaceMode: WorkspaceMode;
   sandboxCode: string;
   creates: CreatedImage[];
+  flowOptions: FlowOptions;
 };
 
 type BossState = WorkspaceSlice & {
@@ -62,6 +70,7 @@ type BossState = WorkspaceSlice & {
   setLastModelId: (id: string | null) => void;
   setWorkspaceMode: (mode: WorkspaceMode) => void;
   setSandboxCode: (code: string) => void;
+  setFlowOptions: (patch: Partial<FlowOptions>) => void;
   addCreate: (item: CreatedImage) => void;
   setActiveAgent: (id: string) => void;
   forgeAgent: (input: { role: AgentRole; task: string; constraints?: string[] }) => string;
@@ -101,6 +110,7 @@ const emptySlice: WorkspaceSlice = {
   workspaceMode: "command",
   sandboxCode: `// BossnuGrok sandbox — no network, no parent DOM\nconsole.log("ready");\nconst sum = [1, 2, 3].reduce((a, b) => a + b, 0);\nconsole.log("sum", sum);`,
   creates: [],
+  flowOptions: DEFAULT_FLOW_OPTIONS,
 };
 
 export const useBossStore = create<BossState>()(
@@ -114,6 +124,8 @@ export const useBossStore = create<BossState>()(
       setLastModelId: (lastModelId) => set({ lastModelId }),
       setWorkspaceMode: (workspaceMode) => set({ workspaceMode }),
       setSandboxCode: (sandboxCode) => set({ sandboxCode }),
+      setFlowOptions: (patch) =>
+        set((state) => ({ flowOptions: { ...state.flowOptions, ...patch } })),
       addCreate: (item) => set((state) => ({ creates: [item, ...state.creates].slice(0, 24) })),
       setActiveAgent: (id) => set({ activeAgentId: id }),
       forgeAgent: ({ role, task, constraints }) => {
@@ -201,6 +213,7 @@ export const useBossStore = create<BossState>()(
           workspaceMode: slice.workspaceMode || "command",
           sandboxCode: slice.sandboxCode ?? get().sandboxCode,
           creates: slice.creates ?? [],
+          flowOptions: slice.flowOptions ?? DEFAULT_FLOW_OPTIONS,
         }),
     }),
     {
@@ -222,6 +235,7 @@ export const useBossStore = create<BossState>()(
         workspaceMode: state.workspaceMode,
         sandboxCode: state.sandboxCode,
         creates: state.creates.slice(0, 12),
+        flowOptions: state.flowOptions ?? DEFAULT_FLOW_OPTIONS,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -229,6 +243,7 @@ export const useBossStore = create<BossState>()(
           if (!state.agents.some((a) => a.id === state.activeAgentId)) {
             state.activeAgentId = CORE_BOSS.id;
           }
+          state.flowOptions = { ...DEFAULT_FLOW_OPTIONS, ...state.flowOptions };
         }
         state?.markHydrated();
       },

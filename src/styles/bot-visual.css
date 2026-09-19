@@ -1,0 +1,346 @@
+/* Bot Visualizer — uses BossnuGrok tokens, no extra palette */
+
+.bot-visualizer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  animation: bot-fade-in var(--motion-fast) var(--ease-smooth-out);
+}
+
+.bot-visualizer.compact {
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+}
+
+.bot-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.bot-status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-muted);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.live {
+  background: var(--success);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--success) 55%, transparent);
+  animation: bot-pulse-dot 2s ease-in-out infinite;
+}
+
+.status-dot.offline {
+  background: var(--fg-subtle);
+}
+
+@keyframes bot-pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.12);
+  }
+}
+
+.bot-flow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.bot-flow-title,
+.bot-timeline-title {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.bot-flow-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bot-flow-steps-rail {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.bot-flow-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.bot-flow-wrapper-rail {
+  flex-direction: row;
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.bot-flow-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition:
+    border-color var(--motion-quick) var(--ease-out),
+    opacity var(--motion-quick) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-smooth-out);
+}
+
+.bot-flow-step.status-pending {
+  opacity: 0.42;
+}
+
+.bot-flow-step.status-running {
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--fg) 10%, transparent);
+  animation: bot-pulse-flow 1.6s ease-in-out infinite;
+}
+
+.bot-flow-step.status-done {
+  border-color: color-mix(in oklab, var(--success) 45%, var(--border));
+}
+
+.bot-flow-step.status-error {
+  border-color: color-mix(in oklab, var(--danger) 55%, var(--border));
+}
+
+@keyframes bot-pulse-flow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--fg) 8%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--fg) 18%, transparent);
+  }
+}
+
+.bot-flow-icon {
+  display: inline-flex;
+  color: var(--fg);
+}
+
+.bot-flow-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bot-flow-label {
+  font-size: 0.8125rem;
+  color: var(--fg);
+}
+
+.bot-flow-detail,
+.bot-flow-duration,
+.timeline-duration,
+.timeline-time {
+  font-size: 0.6875rem;
+  color: var(--fg-subtle);
+  font-family: var(--font-mono);
+}
+
+.bot-flow-status-icon {
+  display: inline-flex;
+}
+
+.bot-flow-arrow {
+  color: var(--fg-subtle);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.bot-flow-arrow.arrow-done {
+  color: var(--success);
+}
+
+.bot-flow-arrow-rail {
+  padding: 0 2px;
+  align-self: center;
+}
+
+.bot-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.bot-timeline-item {
+  display: flex;
+  gap: 10px;
+}
+
+.bot-timeline-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.marker-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 5px;
+}
+
+.marker-dot.type-info {
+  background: color-mix(in oklab, var(--fg) 55%, transparent);
+}
+.marker-dot.type-success {
+  background: var(--success);
+}
+.marker-dot.type-error {
+  background: var(--danger);
+}
+.marker-dot.type-warning {
+  background: color-mix(in oklab, var(--fg) 70%, #b08a4a);
+}
+
+.marker-line {
+  flex: 1;
+  width: 2px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.bot-timeline-content {
+  flex: 1;
+  padding-bottom: var(--space-3);
+}
+
+.bot-timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+}
+
+.timeline-icon {
+  display: inline-flex;
+  color: var(--fg-muted);
+}
+
+.timeline-label {
+  flex: 1;
+  color: var(--fg);
+}
+
+.bot-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bot-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+}
+
+.bot-progress-label {
+  color: var(--fg-muted);
+}
+
+.bot-progress-percent {
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.bot-progress-bar {
+  height: 6px;
+  background: var(--bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bot-progress-fill {
+  height: 100%;
+  background: var(--fg);
+  border-radius: 3px;
+  transition: width var(--motion-medium) var(--ease-smooth-out);
+}
+
+.bot-progress.status-done .bot-progress-fill {
+  background: var(--success);
+}
+
+.bot-progress.status-error .bot-progress-fill {
+  background: var(--danger);
+}
+
+@keyframes bot-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-y-micro, 4px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .bot-visualizer {
+    padding: 10px;
+  }
+  .bot-flow-step {
+    padding: 6px 10px;
+  }
+  .bot-flow-label {
+    font-size: 0.78rem;
+  }
+  .bot-status-bar {
+    font-size: 0.65rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bot-visualizer,
+  .bot-flow-step.status-running,
+  .status-dot.live,
+  .bot-progress-fill {
+    animation: none !important;
+    transition: none !important;
+  }
+}
