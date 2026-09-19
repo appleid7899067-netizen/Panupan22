@@ -1,7 +1,7 @@
 import type { SkillCall, SkillDefinition, SkillId, SkillResult } from "./skill-types";
 import { recordError, recordSuccess, getDailyInsights, getSuccessRate, loadMemory } from "../memory/storage";
 import { fetchLiveData } from "@/lib/live-data";
-import { chatWithPuter } from "@/lib/puter-ai";\nimport { loadPuter } from "@/lib/puter";
+import { chatWithPuter } from "@/lib/puter-ai";
 
 export const SKILLS: SkillDefinition[] = [
   {
