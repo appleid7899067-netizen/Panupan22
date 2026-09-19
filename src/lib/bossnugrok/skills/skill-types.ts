@@ -5,7 +5,7 @@ export type SkillId =
   | "live-scores"
   | "link-follower"
   | "doc-reader"
-  | "prompt-lab";
+  | "prompt-lab"\n  | "image-create"\n  | "video-create"\n  | "text-to-speech"\n  | "image-ocr"\n  | "speech-to-text"\n  | "voice-changer";
 
 export type SkillStatus = "pending" | "running" | "done" | "error" | "rejected";
 
