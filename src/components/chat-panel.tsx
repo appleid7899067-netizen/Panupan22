@@ -20,6 +20,8 @@ import { usePuterAuth } from "@/lib/puter-auth";
 import { useBossStore, type ChatMessage } from "@/lib/store";
 import { needsApproval } from "@/lib/chat-guards";
 import { cn, uid } from "@/lib/utils";
+import { StreamingMessage } from "@/components/StreamingMessage";
+import { streamText } from "@/lib/bossnugrok/stream-text";
 
 type LocalFile = { name: string; mime: string; text: string };
 type ApprovalRequest = { conversationId: string; messageId: string; command: string };
@@ -287,11 +289,17 @@ export function ChatPanel() {
           const step = Math.max(12, Math.floor(full.length / 40));
           flow.complete("process");
           flow.start("render");
-          for (let i = 0; i < full.length; i += step) {
-            const shown = full.slice(0, Math.min(full.length, i + step));
-            paintFlow(id, assistantId, flow, { content: shown, model: result.model, skillCall: skillPatch });
-            await new Promise((r) => setTimeout(r, 16));
-          }
+          await streamText(full, {
+            delay: 20,
+            chunkSize: 2,
+            onChunk: (() => {
+              let shown = "";
+              return (chunk: string) => {
+                shown += chunk;
+                paintFlow(id, assistantId, flow, { content: shown, model: result.model, skillCall: skillPatch });
+              };
+            })(),
+          });
           flow.complete("render");
           flow.finishAll(true);
           paintFlow(
@@ -397,15 +405,20 @@ export function ChatPanel() {
         const result = await chatGrok({ data: { messages: history, system } });
         if (!result.ok) throw new Error(result.error);
         const full = result.text;
-        const step = Math.max(12, Math.floor(full.length / 40));
         flow.complete("model", result.model);
         flow.complete("process");
         flow.start("render");
-        for (let i = 0; i < full.length; i += step) {
-          const shown = full.slice(0, Math.min(full.length, i + step));
-          paintFlow(id, assistantId, flow, { content: shown, model: result.model });
-          await new Promise((r) => setTimeout(r, 16));
-        }
+        await streamText(full, {
+          delay: 20,
+          chunkSize: 2,
+          onChunk: (() => {
+            let shown = "";
+            return (chunk: string) => {
+              shown += chunk;
+              paintFlow(id, assistantId, flow, { content: shown, model: result.model });
+            };
+          })(),
+        });
         flow.complete("render");
         flow.finishAll(true);
         paintFlow(id, assistantId, flow, { content: full, model: result.model }, false);
@@ -591,7 +604,7 @@ export function ChatPanel() {
                       {msg.pending && (!msg.content || msg.content === thinkingText) ? (
                         busy ? <p className="boss-shimmer text-sm">{t.thinking}</p> : null
                       ) : msg.content ? (
-                        <Markdown text={msg.content} />
+                        <StreamingMessage content={msg.content} isStreaming={!!msg.pending} />
                       ) : busy ? (
                         <p className="boss-shimmer text-sm">{t.thinking}</p>
                       ) : null}
