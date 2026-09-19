@@ -23,6 +23,7 @@ import { cn, uid } from "@/lib/utils";
 import { StreamingMessage } from "@/components/StreamingMessage";
 import { streamText } from "@/lib/bossnugrok/stream-text";
 import { InChatTools } from "@/components/InChatTools";
+import { ActivityTicker } from "@/components/ActivityTicker";
 
 type LocalFile = { name: string; mime: string; text: string };
 type ApprovalRequest = { conversationId: string; messageId: string; command: string };
@@ -570,36 +571,34 @@ export function ChatPanel() {
                 >
                   {msg.role === "assistant" ? (
                     <>
-                      {(msg.pending || (msg.flowSteps && msg.flowSteps.length > 0)) &&
-                      (flowOptions.showFlow ||
-                        flowOptions.showTimeline ||
-                        flowOptions.showProgress ||
-                        flowOptions.showStatus) ? (
+                      {(msg.pending || (msg.flowSteps && msg.flowSteps.length > 0)) ? (
                         <div className={msg.content && msg.content !== thinkingText ? "mb-3" : undefined}>
-                          <BotVisualizer
-                            status={
-                              msg.pending
-                                ? "running"
-                                : msg.skillCall?.status === "error"
-                                  ? "error"
-                                  : "done"
-                            }
-                            skill={msg.skillCall?.skillId}
-                            model={msg.model ? shortModelLabel(msg.model) : undefined}
-                            progress={msg.progress ?? 0}
-                            duration={msg.durationMs}
-                            steps={msg.flowSteps}
-                            events={msg.flowEvents}
-                            showFlow={flowOptions.showFlow}
-                            showTimeline={flowOptions.showTimeline}
-                            showProgress={flowOptions.showProgress && !!msg.pending}
-                            showStatus={flowOptions.showStatus}
-                            compact={flowOptions.compact || !msg.pending}
-                            layout={flowOptions.layout}
-                            title={t.flowTitle}
-                            progressLabel={t.flowProgress}
-                            timelineTitle={t.flowTimeline}
-                          />
+                          {msg.pending ? (
+                            <ActivityTicker
+                              language={language}
+                              steps={msg.flowSteps}
+                              events={msg.flowEvents}
+                            />
+                          ) : (
+                            <BotVisualizer
+                              status={msg.skillCall?.status === "error" ? "error" : "done"}
+                              skill={msg.skillCall?.skillId}
+                              model={msg.model ? shortModelLabel(msg.model) : undefined}
+                              progress={msg.progress ?? 0}
+                              duration={msg.durationMs}
+                              steps={msg.flowSteps}
+                              events={msg.flowEvents}
+                              showFlow={flowOptions.showFlow}
+                              showTimeline={flowOptions.showTimeline}
+                              showProgress={false}
+                              showStatus={flowOptions.showStatus}
+                              compact={true}
+                              layout={flowOptions.layout}
+                              title={t.flowTitle}
+                              progressLabel={t.flowProgress}
+                              timelineTitle={t.flowTimeline}
+                            />
+                          )}
                         </div>
                       ) : null}
                       {msg.pending && (!msg.content || msg.content === thinkingText) ? (
