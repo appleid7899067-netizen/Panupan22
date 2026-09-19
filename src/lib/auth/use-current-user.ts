@@ -1,4 +1,5 @@
 import { authClient, authEnabled } from "./client";
+import type { AppRole } from "./verify.server";
 
 /** Normalized user shape used across the app, auth on or off. */
 export type AppUser = {
@@ -8,6 +9,7 @@ export type AppUser = {
   profileImageUrl: string | null;
   /** True when this is the sandbox/dev fallback (auth not configured). */
   isDevFallback: boolean;
+  role: AppRole;
 };
 
 /**
@@ -23,6 +25,7 @@ export const DEV_USER: AppUser = {
   primaryEmail: "dev@example.com",
   profileImageUrl: null,
   isDevFallback: true,
+  role: "USER",
 };
 
 /** `useCurrentUserState()` result: the user plus the session-loading flag. */
@@ -67,6 +70,7 @@ export function useCurrentUserState(): CurrentUserState {
           primaryEmail: user.email ?? null,
           profileImageUrl: user.image ?? null,
           isDevFallback: false,
+          role: (user.role === "OWNER" || user.role === "ADMIN" ? user.role : "USER") as AppRole,
         }
       : null,
     isPending,
