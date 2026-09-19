@@ -41,7 +41,7 @@ type ManusMessage = {
   structured_output_result?: { success?: boolean; value?: unknown; error?: string | null };
 };
 
-function LiveTasks({ th }: { th: boolean }) {
+function LiveTasks({ th, onConfigured }: { th: boolean; onConfigured?: () => void }) {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [tasks, setTasks] = useState<ManusTask[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState("");
@@ -50,6 +50,8 @@ function LiveTasks({ th }: { th: boolean }) {
   const [busy, setBusy] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [error, setError] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [configuring, setConfiguring] = useState(false);
 
   const load = async () => {
     setError("");
@@ -97,6 +99,30 @@ function LiveTasks({ th }: { th: boolean }) {
   const selectedTask = tasks.find((task) => task.id === selectedTaskId);
   const latestStatus = [...messages].reverse().find((message) => message.type === "status_update")?.status_update?.agent_status;
   const effectiveStatus = latestStatus || selectedTask?.status;
+
+  const configure = async () => {
+    const value = apiKey.trim();
+    if (!value || configuring) return;
+    setConfiguring(true);
+    setError("");
+    try {
+      const response = await fetch("/api/manus", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "configure", apiKey: value }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || "เชื่อมต่อ Manus ไม่สำเร็จ");
+      setApiKey("");
+      onConfigured?.();
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "เชื่อมต่อ Manus ไม่สำเร็จ");
+    } finally {
+      setConfiguring(false);
+    }
+  };
 
   const createTask = async () => {
     const value = prompt.trim();
@@ -147,10 +173,19 @@ function LiveTasks({ th }: { th: boolean }) {
   return <Card title={th ? "งาน Manus จริง" : "Live Manus tasks"} icon={ListTodo}
     action={<div className="flex items-center gap-2"><StatusPill tone={configured ? "lime" : "amber"}>{configured === null ? "CHECKING" : configured ? "CONNECTED" : "NOT CONFIGURED"}</StatusPill><Button size="sm" variant="ghost" className="h-8" onClick={() => void load()}><RefreshCw className="size-3.5" /></Button></div>}>
     <div className="space-y-3">
+      {!configured ? <div className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-3">
+        <p className="text-xs font-medium">{th ? "ใส่ Manus API Key" : "Enter Manus API key"}</p>
+        <p className="mt-1 text-[10px] text-subtle">{th ? "คีย์จะถูกเก็บใน HttpOnly cookie และส่งไปยังเซิร์ฟเวอร์เท่านั้น" : "The key is stored in an HttpOnly cookie and sent only to the server."}</p>
+        <div className="mt-2 flex gap-2">
+          <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void configure(); }} id="manus-live-key" placeholder="manus_..." autoComplete="off" className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-xs outline-none" />
+          <Button size="sm" className="h-9 shrink-0" disabled={!apiKey.trim() || configuring} onClick={() => void configure()}><Link2 className="size-3.5" />{configuring ? "..." : th ? "เชื่อมต่อ" : "Connect"}</Button>
+        </div>
+      </div> : null}
       <div className="flex gap-2">
         <input value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void createTask(); } }} disabled={!configured || busy} placeholder={configured ? (th ? "สั่งงาน Manus..." : "Give Manus a task...") : (th ? "ตั้ง MANUS_API_KEY บนเซิร์ฟเวอร์ก่อน" : "Configure MANUS_API_KEY on the server")} className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-xs outline-none" />
         <Button size="sm" className="h-9 shrink-0" disabled={!configured || busy || !prompt.trim()} onClick={() => void createTask()}><Play className="size-3.5" />{busy ? "..." : th ? "เริ่ม" : "Run"}</Button>
       </div>
+      {configured ? <button type="button" onClick={async () => { await fetch("/api/manus", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "disconnect" }) }); await load(); }} className="text-[10px] text-subtle hover:text-foreground">{th ? "เปลี่ยน/ถอด API key" : "Change / disconnect API key"}</button> : null}
       {error ? <p className="rounded-lg border border-red-300/20 bg-red-300/5 p-2 text-[10px] text-red-300">{error}</p> : null}
 
       {configured && tasks.length === 0 ? <p className="rounded-xl border border-dashed border-border p-5 text-center text-xs text-subtle">{th ? "ยังไม่มีงานจาก Manus API" : "No Manus API tasks yet."}</p> : null}
@@ -187,7 +222,7 @@ function LiveTasks({ th }: { th: boolean }) {
 export function ManusHubPanel() {
   const language = useBossStore((s) => s.language); const [tab, setTab] = useState<HubTab>("overview"); const [query, setQuery] = useState(""); const th = language === "th"; const filteredSkills = useMemo(() => SKILLS.filter((item) => item.includes(query.toLowerCase())), [query]);
   const copy = th ? { title: "Manus Hub", lead: "ศูนย์รวม Tasks, Browser/OS, Skills, Catalog และระบบอัตโนมัติ", preview: "API CONNECTOR REQUIRED", connect: "เชื่อมต่อ Manus API", browser: "Browser และ OS ต้องใช้สิทธิ์/เซสชันภายนอก", task: "งานล่าสุด", project: "โปรเจกต์", file: "ไฟล์และ Artifacts", schedule: "กำหนดการ", no: "ยังไม่ได้เชื่อมต่อข้อมูลจริง" } : { title: "Manus Hub", lead: "One surface for Tasks, Browser/OS, Skills, Catalog and automation", preview: "API CONNECTOR REQUIRED", connect: "Connect Manus API", browser: "Browser and OS require external permission/session", task: "Recent tasks", project: "Projects", file: "Files & artifacts", schedule: "Schedules", no: "Live data is not connected yet" };
-  return <div className="flex h-full min-h-0 flex-col overflow-y-auto"><header className="border-b border-border px-4 py-4 sm:px-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.22em] text-cyan-300"><Sparkles className="size-3.5" /> MANUS SUITE</div><h2 className="mt-2 font-display text-3xl tracking-tight">{copy.title}</h2><p className="mt-1 text-sm text-muted-foreground">{copy.lead}</p></div><div className="flex items-center gap-2"><StatusPill tone="amber">{copy.preview}</StatusPill><Button asChild size="sm" variant="secondary" className="h-9"><a href="https://manus.im/app#settings/integrations/api" target="_blank" rel="noreferrer"><Link2 className="size-3.5" />{copy.connect}</a></Button></div></div><div className="mt-4 flex gap-1 overflow-x-auto rounded-2xl border border-border bg-card/40 p-1">{TABS.map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => setTab(id)} className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs transition-colors", tab === id ? "bg-secondary text-foreground" : "text-subtle hover:text-foreground")}><Icon className="size-3.5" />{label}</button>)}</div></header>
+  return <div className="flex h-full min-h-0 flex-col overflow-y-auto"><header className="border-b border-border px-4 py-4 sm:px-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.22em] text-cyan-300"><Sparkles className="size-3.5" /> MANUS SUITE</div><h2 className="mt-2 font-display text-3xl tracking-tight">{copy.title}</h2><p className="mt-1 text-sm text-muted-foreground">{copy.lead}</p></div><div className="flex items-center gap-2"><StatusPill tone="amber">{copy.preview}</StatusPill><button type="button" onClick={() => document.getElementById("manus-live-key")?.focus()} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-secondary px-3 text-xs font-medium"><Link2 className="size-3.5" />{copy.connect}</button></div></div><div className="mt-4 flex gap-1 overflow-x-auto rounded-2xl border border-border bg-card/40 p-1">{TABS.map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => setTab(id)} className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs transition-colors", tab === id ? "bg-secondary text-foreground" : "text-subtle hover:text-foreground")}><Icon className="size-3.5" />{label}</button>)}</div></header>
     {tab === "browser" ? <div className="p-4 sm:p-6"><BrowserSimulation th={th} /></div> : tab === "overview" ? <div className="grid gap-4 p-4 sm:p-6 xl:grid-cols-3"><LiveTasks th={th} /><Card title={copy.project} icon={FolderKanban}><div className="grid grid-cols-2 gap-2">{["BossG Command Center", "Research Lab", "Media Studio", "Website MVP"].map((name) => <div key={name} className="rounded-xl border border-border bg-background p-3"><FolderKanban className="size-4 text-violet-300" /><p className="mt-2 truncate text-xs">{name}</p><p className="mt-1 text-[10px] text-subtle">durable instructions</p></div>)}</div></Card><Card title={copy.file} icon={HardDrive}><div className="rounded-xl border border-dashed border-border p-5 text-center"><UploadCloud className="mx-auto size-6 text-cyan-300" /><p className="mt-2 text-xs">Upload, inspect and reuse files</p><p className="mt-1 text-[10px] text-subtle">512 MB/file · API required</p><Button size="sm" variant="secondary" className="mt-3 h-8"><UploadCloud className="size-3.5" />Upload file</Button></div></Card><Card title="Browser / OS" icon={Globe2}><div className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-3"><div className="flex items-center gap-2 text-xs text-amber-300"><ShieldCheck className="size-4" />Permission boundary</div><p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{copy.browser}. This UI does not silently control a personal browser or operating system.</p><Button size="sm" variant="secondary" className="mt-3 h-8" onClick={() => setTab("browser")}><Play className="size-3.5" />Open simulation</Button></div></Card><Card title="Skills & Catalog" icon={Library}><div className="flex flex-wrap gap-2">{SKILLS.slice(0, 8).map((skill) => <StatusPill key={skill} tone="cyan">{skill}</StatusPill>)}</div><button type="button" onClick={() => setTab("skills")} className="mt-4 inline-flex items-center gap-1 text-xs text-cyan-300">Browse full catalog <ArrowUpRight className="size-3.5" /></button></Card><Card title={copy.schedule} icon={CalendarClock}><div className="flex items-center gap-3 rounded-xl border border-border bg-background p-3"><Workflow className="size-5 text-lime-300" /><div><p className="text-xs">No schedules connected</p><p className="text-[10px] text-subtle">Cron, interval and event triggers</p></div></div></Card></div> : <div className="p-4 sm:p-6">{tab === "skills" ? <Card title="Skills catalog" icon={Sparkles} action={<div className="flex items-center gap-2 rounded-full border border-border bg-background px-3"><Search className="size-3.5 text-subtle" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search skills" className="h-8 w-32 bg-transparent text-xs outline-none" /></div>}><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{filteredSkills.map((skill) => <div key={skill} className="rounded-xl border border-border bg-background p-4"><div className="flex items-center justify-between"><Sparkles className="size-4 text-lime-300" /><StatusPill tone="lime">available</StatusPill></div><p className="mt-3 text-sm font-medium">{skill}</p><p className="mt-1 text-[10px] text-subtle">Reusable Manus capability · project skill</p></div>)}</div></Card> : <div className="grid gap-4 xl:grid-cols-2"><Card title={TABS.find((item) => item.id === tab)?.label ?? "Manus"} icon={TABS.find((item) => item.id === tab)?.icon ?? Activity}><div className="rounded-2xl border border-dashed border-border p-10 text-center"><PackageOpen className="mx-auto size-8 text-cyan-300" /><p className="mt-3 text-sm">{copy.no}</p><p className="mt-1 text-xs text-subtle">Connect Manus API to load live records and actions.</p><Button asChild className="mt-4" size="sm"><a href="https://manus.im/app#settings/integrations/api" target="_blank" rel="noreferrer"><Link2 className="size-3.5" />Connect connector</a></Button></div></Card><Card title="Capability notes" icon={Settings2}><div className="space-y-2 text-xs text-muted-foreground"><p>Tasks: create, continue, inspect, stop.</p><p>Browser/OS: use the Mock Simulation tab for safe local testing.</p><p>Skills: catalog and force/enable controls.</p><p>Artifacts: reports, websites, media and downloadable files.</p></div></Card></div>}</div>}
   </div>;
 }
