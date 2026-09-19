@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Activity, ArrowUpRight, Bot, CalendarClock, Check, ChevronRight, CircleDashed, ExternalLink, FileUp, FolderKanban, Globe2, HardDrive, Library, Link2, ListTodo, MonitorUp, PackageOpen, Play, RefreshCw, Search, ShieldCheck, Sparkles, Square, Workflow, X } from "lucide-react";
+import { Activity, ArrowUpRight, Bot, CalendarClock, Check, ChevronRight, CircleDashed, ExternalLink, FileUp, FolderKanban, HardDrive, Library, Link2, ListTodo, MonitorUp, Play, RefreshCw, Search, ShieldCheck, Sparkles, Square, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBossStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
