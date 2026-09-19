@@ -322,6 +322,28 @@ async function runLinkFollower(args: Record<string, unknown>, onStream?: (c: str
   }
 }
 
+async function runPromptLab(args: Record<string, unknown>, onStream?: (c: string) => void): Promise<SkillResult> {
+  const start = Date.now();
+  const userPrompt = String(args.userPrompt ?? "").trim();
+  if (!userPrompt) return { ok: false, error: "ไม่มี user prompt สำหรับ Prompt Lab", duration: Date.now() - start };
+  let system = "คุณคือ BossnuGrok ผู้ช่วยของระบบนี้";
+  try { system = localStorage.getItem("bossg:prompt-lab-system")?.trim() || system; } catch {}
+  onStream?.("กำลังเรียก Prompt Lab ผ่าน Puter…\n");
+  try {
+    const result = await chatWithPuter({
+      messages: [{ role: "system", content: system }, { role: "user", content: userPrompt }],
+      pinnedModel: null,
+      preferTestMode: false,
+      onDelta: (text) => onStream?.(text),
+    });
+    return { ok: true, data: { model: result.model.id, text: result.text }, duration: Date.now() - start };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    onStream?.("❌ " + message + "\n");
+    return { ok: false, error: message, duration: Date.now() - start };
+  }
+}
+
 async function runDocReader(args: Record<string, unknown>, onStream?: (c: string) => void): Promise<SkillResult> {
   const start = Date.now();
   const text = String(args.text ?? "").trim();
@@ -368,6 +390,9 @@ export async function executeSkill(
         break;
       case "doc-reader":
         result = await runDocReader(call.args, stream);
+        break;
+      case "prompt-lab":
+        result = await runPromptLab(call.args, stream);
         break;
       default:
         result = { ok: false, error: "unknown skill", duration: 0 };
