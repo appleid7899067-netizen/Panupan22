@@ -1,7 +1,7 @@
 import type { SkillCall, SkillDefinition, SkillId, SkillResult } from "./skill-types";
 import { recordError, recordSuccess, getDailyInsights, getSuccessRate, loadMemory } from "../memory/storage";
 import { fetchLiveData } from "@/lib/live-data";
-import { chatWithPuter } from "@/lib/puter-ai";
+import { chatWithPuter } from "@/lib/puter-ai";\nimport { loadPuter } from "@/lib/puter";
 
 export const SKILLS: SkillDefinition[] = [
   {
@@ -124,6 +124,23 @@ export function parseSkillArgs(skillId: SkillId, input: string): Record<string, 
   }
   if (skillId === "doc-reader") {
     return { text: input.slice(0, 12_000) };
+  }
+  if (skillId === "image-create") {
+    return { prompt: input.replace(/สร้างภาพ|วาดภาพ|generate image|create image|ทำรูป/gi, "").trim() || input.trim() };
+  }
+  if (skillId === "video-create") {
+    return { prompt: input.replace(/สร้างวิดีโอ|ทำวิดีโอ|generate video|create video/gi, "").trim() || input.trim() };
+  }
+  if (skillId === "text-to-speech") {
+    return { text: input.replace(/อ่านข้อความ|อ่านออกเสียง|text to speech|tts|พากย์เสียง/gi, "").trim() || input.trim() };
+  }
+  if (skillId === "image-ocr") {
+    const match = input.match(/https?:\/\/[^\s]+/i);
+    return { source: match?.[0] ?? "" };
+  }
+  if (skillId === "speech-to-text" || skillId === "voice-changer") {
+    const match = input.match(/https?:\/\/[^\s]+/i);
+    return { source: match?.[0] ?? "" };
   }
   if (skillId === "prompt-lab") {
     const userPrompt = input
@@ -318,6 +335,86 @@ async function runLinkFollower(args: Record<string, unknown>, onStream?: (c: str
     const message = err instanceof Error ? err.message : String(err);
     recordError({ skillId: "link-follower", error: message, args, fix: "ตรวจรูปแบบ URL" });
     onStream?.(`❌ ${message}\n`);
+    return { ok: false, error: message, duration: Date.now() - start };
+  }
+}
+
+async function runMediaSkill(
+  skillId: "image-create" | "video-create" | "text-to-speech" | "image-ocr" | "speech-to-text" | "voice-changer",
+  args: Record<string, unknown>,
+  onStream?: (c: string) => void,
+): Promise<SkillResult> {
+  const start = Date.now();
+  const puter = window.puter ?? (await loadPuter());
+  if (!puter.ai) return { ok: false, error: "Puter AI is not available", duration: Date.now() - start };
+
+  try {
+    if (skillId === "image-create") {
+      if (!puter.ai.txt2img) throw new Error("Puter image generation is not available.");
+      const prompt = String(args.prompt ?? "").trim();
+      if (!prompt) throw new Error("ไม่มี prompt สำหรับสร้างภาพ");
+      onStream?.("กำลังสร้างภาพผ่าน Puter…\n");
+      const image = await puter.ai.txt2img(prompt, { model: "gpt-image-1-mini", test_mode: false });
+      const url = image?.src;
+      if (!url) throw new Error("Puter returned no image.");
+      onStream?.("สร้างภาพเสร็จแล้ว\n");
+      return { ok: true, data: { kind: "image", url, prompt }, duration: Date.now() - start };
+    }
+
+    if (skillId === "video-create") {
+      if (!puter.ai.txt2vid) throw new Error("Puter video generation is not available.");
+      const prompt = String(args.prompt ?? "").trim();
+      if (!prompt) throw new Error("ไม่มี prompt สำหรับสร้างวิดีโอ");
+      onStream?.("กำลังสร้างวิดีโอผ่าน Puter…\n");
+      const video = await puter.ai.txt2vid(prompt, { model: "veo-3.1-lite", seconds: 6, size: "1280x720", generate_audio: true, test_mode: false });
+      const url = video?.src;
+      if (!url) throw new Error("Puter returned no video.");
+      onStream?.("สร้างวิดีโอเสร็จแล้ว\n");
+      return { ok: true, data: { kind: "video", url, prompt }, duration: Date.now() - start };
+    }
+
+    if (skillId === "text-to-speech") {
+      if (!puter.ai.txt2speech) throw new Error("Puter text-to-speech is not available.");
+      const text = String(args.text ?? "").trim();
+      if (!text) throw new Error("ไม่มีข้อความสำหรับ TTS");
+      onStream?.("กำลังสร้างเสียง…\n");
+      const audio = await puter.ai.txt2speech(text, { language: "th-TH", output_format: "mp3" });
+      const url = audio?.src;
+      if (!url) throw new Error("Puter returned no audio.");
+      onStream?.("สร้างเสียงเสร็จแล้ว\n");
+      return { ok: true, data: { kind: "audio", url, text }, duration: Date.now() - start };
+    }
+
+    const source = String(args.source ?? "").trim();
+    if (!source) throw new Error("ต้องมี URL หรือไฟล์ต้นทางสำหรับงานนี้");
+
+    if (skillId === "image-ocr") {
+      if (!puter.ai.img2txt) throw new Error("Puter OCR is not available.");
+      onStream?.("กำลังอ่านตัวอักษรจากภาพ…\n");
+      const text = await puter.ai.img2txt(source);
+      return { ok: true, data: { text }, duration: Date.now() - start };
+    }
+
+    if (skillId === "speech-to-text") {
+      if (!puter.ai.speech2txt) throw new Error("Puter speech-to-text is not available.");
+      onStream?.("กำลังถอดเสียง…\n");
+      const result = await puter.ai.speech2txt(source, { response_format: "text" });
+      return { ok: true, data: { text: typeof result === "string" ? result : JSON.stringify(result) }, duration: Date.now() - start };
+    }
+
+    if (skillId === "voice-changer") {
+      if (!puter.ai.speech2speech) throw new Error("Puter voice changer is not available.");
+      onStream?.("กำลังเปลี่ยนเสียง…\n");
+      const audio = await puter.ai.speech2speech(source, { output_format: "mp3" });
+      const url = audio?.src;
+      if (!url) throw new Error("Puter returned no converted audio.");
+      return { ok: true, data: { kind: "audio", url }, duration: Date.now() - start };
+    }
+
+    return { ok: false, error: "unknown media skill", duration: Date.now() - start };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    onStream?.("❌ " + message + "\n");
     return { ok: false, error: message, duration: Date.now() - start };
   }
 }
