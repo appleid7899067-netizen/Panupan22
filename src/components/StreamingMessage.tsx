@@ -19,11 +19,12 @@ export function StreamingMessage({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }, [content, output]);
+    const el = scrollRef.current;
+    if (!el || output === undefined) return;
+    // Never queue smooth-scroll animations while streaming terminal output.
+    // Instant scrolling keeps the viewport stable on mobile.
+    el.scrollTop = el.scrollHeight;
+  }, [output]);
 
   return (
     <div className="streaming-message">
