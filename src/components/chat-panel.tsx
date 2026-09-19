@@ -144,8 +144,10 @@ export function ChatPanel() {
   }, [convo?.messages.length, busy, agent?.id, convo?.messages[convo.messages.length - 1]?.content]);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("boss-chat-theme");
-    if (saved && ["lavender", "pink", "blue", "mint", "peach"].includes(saved)) setChatTheme(saved);
+    try {
+      const saved = window.localStorage.getItem("boss-chat-theme");
+      if (saved && ["lavender", "pink", "blue", "mint", "peach"].includes(saved)) setChatTheme(saved);
+    } catch {}
   }, []);
 
   useEffect(() => {
