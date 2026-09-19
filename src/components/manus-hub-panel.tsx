@@ -30,11 +30,25 @@ function BrowserSimulation({ th }: { th: boolean }) {
 
 type ManusTask = { id: string; status?: string; title?: string; task_url?: string; created_at?: number };
 
+type ManusMessage = {
+  id: string;
+  type: "user_message" | "assistant_message" | "error_message" | "status_update" | "user_stop" | "structured_output_result";
+  timestamp?: number;
+  user_message?: { content?: string };
+  assistant_message?: { content?: string; question_expectation?: { options?: string[]; selection_mode?: string } };
+  error_message?: { content?: string; error_type?: string };
+  status_update?: { agent_status?: string; brief?: string; description?: string; status_detail?: { waiting_for_event_type?: string; waiting_description?: string } };
+  structured_output_result?: { success?: boolean; value?: unknown; error?: string | null };
+};
+
 function LiveTasks({ th }: { th: boolean }) {
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [tasks, setTasks] = useState<ManusTask[]>([]);
+  const [selectedTaskId, setSelectedTaskId] = useState("");
+  const [messages, setMessages] = useState<ManusMessage[]>([]);
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [error, setError] = useState("");
 
   const load = async () => {
@@ -42,16 +56,47 @@ function LiveTasks({ th }: { th: boolean }) {
     try {
       const status = await fetch("/api/manus?action=status", { credentials: "same-origin" }).then((r) => r.json());
       setConfigured(Boolean(status.configured));
-      if (!status.configured) return;
-      const data = await fetch("/api/manus?action=tasks&limit=8", { credentials: "same-origin" }).then((r) => r.json());
-      if (!data.ok) throw new Error(data.error?.message || data.error || "โหลดงานไม่สำเร็จ");
+      if (!status.configured) {
+        setTasks([]);
+        setMessages([]);
+        return;
+      }
+      const response = await fetch("/api/manus?action=tasks&limit=8", { credentials: "same-origin" });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error?.message || data.error || "โหลดงานไม่สำเร็จ");
       setTasks(Array.isArray(data.data) ? data.data : []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "โหลด Manus ไม่สำเร็จ");
     }
   };
 
+  const loadMessages = async (taskId = selectedTaskId) => {
+    if (!taskId) return;
+    setLoadingMessages(true);
+    try {
+      const response = await fetch(`/api/manus?action=messages&taskId=${encodeURIComponent(taskId)}&limit=50`, { credentials: "same-origin" });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error?.message || data.error || "โหลดผลลัพธ์ไม่สำเร็จ");
+      setMessages(Array.isArray(data.messages) ? data.messages : []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "โหลดผลลัพธ์ไม่สำเร็จ");
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
   useEffect(() => { void load(); }, []);
+
+  useEffect(() => {
+    if (!selectedTaskId) return;
+    void loadMessages(selectedTaskId);
+    const timer = window.setInterval(() => { void loadMessages(selectedTaskId); }, 4000);
+    return () => window.clearInterval(timer);
+  }, [selectedTaskId]);
+
+  const selectedTask = tasks.find((task) => task.id === selectedTaskId);
+  const latestStatus = [...messages].reverse().find((message) => message.type === "status_update")?.status_update?.agent_status;
+  const effectiveStatus = latestStatus || selectedTask?.status;
 
   const createTask = async () => {
     const value = prompt.trim();
@@ -68,6 +113,7 @@ function LiveTasks({ th }: { th: boolean }) {
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error?.message || data.error || "สร้างงานไม่สำเร็จ");
       setPrompt("");
+      if (data.task_id) setSelectedTaskId(data.task_id);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "สร้างงานไม่สำเร็จ");
@@ -79,6 +125,7 @@ function LiveTasks({ th }: { th: boolean }) {
   const stopTask = async (taskId: string) => {
     if (busy) return;
     setBusy(true);
+    setError("");
     try {
       const response = await fetch("/api/manus", {
         method: "POST",
@@ -89,6 +136,7 @@ function LiveTasks({ th }: { th: boolean }) {
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error?.message || data.error || "หยุดงานไม่สำเร็จ");
       await load();
+      await loadMessages(taskId);
     } catch (e) {
       setError(e instanceof Error ? e.message : "หยุดงานไม่สำเร็จ");
     } finally {
@@ -104,13 +152,34 @@ function LiveTasks({ th }: { th: boolean }) {
         <Button size="sm" className="h-9 shrink-0" disabled={!configured || busy || !prompt.trim()} onClick={() => void createTask()}><Play className="size-3.5" />{busy ? "..." : th ? "เริ่ม" : "Run"}</Button>
       </div>
       {error ? <p className="rounded-lg border border-red-300/20 bg-red-300/5 p-2 text-[10px] text-red-300">{error}</p> : null}
+
       {configured && tasks.length === 0 ? <p className="rounded-xl border border-dashed border-border p-5 text-center text-xs text-subtle">{th ? "ยังไม่มีงานจาก Manus API" : "No Manus API tasks yet."}</p> : null}
-      {tasks.map((task) => <div key={task.id} className="flex items-center gap-3 rounded-xl border border-border bg-background p-3">
-        <CircleDashed className={cn("size-4", task.status === "running" ? "animate-spin text-cyan-300" : task.status === "stopped" ? "text-lime-300" : "text-amber-300")} />
+
+      {tasks.map((task) => <button key={task.id} type="button" onClick={() => setSelectedTaskId(task.id)} className={cn("flex w-full items-center gap-3 rounded-xl border bg-background p-3 text-left transition-colors", selectedTaskId === task.id ? "border-cyan-300/40 bg-cyan-300/5" : "border-border hover:border-cyan-300/20")}>
+        <CircleDashed className={cn("size-4 shrink-0", task.status === "running" ? "animate-spin text-cyan-300" : task.status === "stopped" ? "text-lime-300" : "text-amber-300")} />
         <div className="min-w-0 flex-1"><p className="truncate text-xs">{task.title || task.id}</p><p className="text-[10px] text-subtle">{task.status || "unknown"}</p></div>
-        {task.task_url ? <a href={task.task_url} target="_blank" rel="noreferrer" className="text-cyan-300" aria-label="Open Manus task"><ExternalLink className="size-3.5" /></a> : null}
-        {task.status === "running" ? <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px]" disabled={busy} onClick={() => void stopTask(task.id)}>Stop</Button> : null}
-      </div>)}
+        {task.task_url ? <a href={task.task_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-cyan-300" aria-label="Open Manus task"><ExternalLink className="size-3.5" /></a> : null}
+        {task.status === "running" ? <span onClick={(e) => { e.stopPropagation(); void stopTask(task.id); }} className={cn("rounded-md px-2 py-1 text-[10px] text-red-300", busy ? "pointer-events-none opacity-50" : "hover:bg-red-300/10")}>Stop</span> : null}
+      </button>)}
+
+      {selectedTaskId ? <div className="rounded-2xl border border-border bg-background">
+        <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
+          <div className="min-w-0"><p className="truncate text-xs font-medium">{selectedTask?.title || selectedTaskId}</p><p className="text-[10px] text-subtle">{effectiveStatus || "unknown"}{loadingMessages ? " · syncing…" : ""}</p></div>
+          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => void loadMessages()}><RefreshCw className={cn("size-3.5", loadingMessages && "animate-spin")} /></Button>
+        </div>
+        <div className="max-h-80 space-y-2 overflow-y-auto p-3">
+          {messages.length === 0 ? <p className="py-6 text-center text-xs text-subtle">{th ? "กำลังรอข้อความจาก Manus…" : "Waiting for Manus events…"}</p> : messages.map((message) => {
+            const status = message.status_update;
+            const text = message.type === "assistant_message" ? message.assistant_message?.content : message.type === "user_message" ? message.user_message?.content : message.type === "error_message" ? message.error_message?.content : message.type === "status_update" ? (status?.brief || status?.description || `status: ${status?.agent_status || "unknown"}`) : message.type === "structured_output_result" ? JSON.stringify(message.structured_output_result?.value ?? message.structured_output_result?.error ?? "") : "";
+            if (!text) return null;
+            return <div key={message.id} className={cn("rounded-xl border p-3 text-xs", message.type === "assistant_message" ? "border-cyan-300/20 bg-cyan-300/5" : message.type === "error_message" ? "border-red-300/20 bg-red-300/5 text-red-300" : message.type === "status_update" ? "border-border bg-card/40 text-subtle" : "border-border bg-background")}>
+              <div className="mb-1 text-[9px] uppercase tracking-wider text-subtle">{message.type.replaceAll("_", " ")}</div>
+              <p className="whitespace-pre-wrap break-words leading-relaxed">{text}</p>
+              {message.type === "status_update" && status?.agent_status === "waiting" ? <p className="mt-2 rounded-lg border border-amber-300/20 bg-amber-300/5 p-2 text-[10px] text-amber-200">{status.status_detail?.waiting_description || (th ? "Manus กำลังรอการยืนยัน/ข้อมูลจากคุณ" : "Manus is waiting for input or confirmation.")}</p> : null}
+            </div>;
+          })}
+        </div>
+      </div> : null}
     </div>
   </Card>;
 }
