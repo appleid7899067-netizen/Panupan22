@@ -320,6 +320,90 @@
   }
 }
 
+/* ========== Vertical Activity Stream (thin dark style) ========== */
+
+.bot-activity-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 14px 18px;
+  background: #0a0a0a;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-weight: 300;
+  font-size: 0.9rem;
+  letter-spacing: 0.015em;
+  line-height: 1.55;
+  color: hsl(0 0% 68%);
+}
+
+.bot-activity-stream .item {
+  opacity: 0.48;
+  transition: opacity 0.28s ease, color 0.28s ease;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bot-activity-stream .item.done {
+  opacity: 0.55;
+}
+
+.bot-activity-stream .item.latest,
+.bot-activity-stream .item.running {
+  opacity: 1;
+  color: hsl(0 0% 92%);
+  font-weight: 350;
+}
+
+/* blinking dots while running */
+.bot-activity-stream .item.running::after {
+  content: " …";
+  animation: stream-blink 1.15s step-end infinite;
+}
+
+@keyframes stream-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* soft water flow on the active line */
+.bot-activity-stream .item.running {
+  position: relative;
+  overflow: hidden;
+}
+
+.bot-activity-stream .item.running::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 25%,
+    rgba(255, 255, 255, 0.045) 48%,
+    rgba(255, 255, 255, 0.07) 52%,
+    transparent 75%
+  );
+  background-size: 240% 100%;
+  animation: stream-water 2.6s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bot-activity-stream .item.running > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes stream-water {
+  from {
+    background-position: 220% 0;
+  }
+  to {
+    background-position: -220% 0;
+  }
+}
+
 @media (max-width: 640px) {
   .bot-visualizer {
     padding: 10px;
@@ -333,13 +417,20 @@
   .bot-status-bar {
     font-size: 0.65rem;
   }
+  .bot-activity-stream {
+    padding: 12px 14px;
+    font-size: 0.86rem;
+    gap: 10px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .bot-visualizer,
   .bot-flow-step.status-running,
   .status-dot.live,
-  .bot-progress-fill {
+  .bot-progress-fill,
+  .bot-activity-stream .item.running::before,
+  .bot-activity-stream .item.running::after {
     animation: none !important;
     transition: none !important;
   }

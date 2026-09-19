@@ -2,6 +2,7 @@ import { BotFlow } from "@/components/BotFlow";
 import { BotTimeline } from "@/components/BotTimeline";
 import { BotProgress } from "@/components/BotProgress";
 import { BotStatus } from "@/components/BotStatus";
+import { BotActivityStream } from "@/components/BotActivityStream";
 import { createDefaultFlow, type FlowLayout, type FlowStep, type TimelineEvent } from "@/lib/bot-flow";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,8 @@ interface BotVisualizerProps {
   showTimeline?: boolean;
   showProgress?: boolean;
   showStatus?: boolean;
+  /** Prefer the thin vertical activity stream (like the reference screenshot) */
+  streamMode?: boolean;
   compact?: boolean;
   layout?: FlowLayout;
   title?: string;
@@ -36,6 +39,7 @@ export function BotVisualizer({
   showTimeline = true,
   showProgress = true,
   showStatus = true,
+  streamMode = true,
   compact = false,
   layout = "stack",
   title,
@@ -44,6 +48,33 @@ export function BotVisualizer({
 }: BotVisualizerProps) {
   const flowSteps = steps ?? createDefaultFlow();
   const live = status === "running";
+
+  // When streamMode is on we show the clean vertical activity feed
+  if (streamMode) {
+    return (
+      <div className={cn("bot-visualizer", compact && "compact", "stream-mode")}>
+        {showStatus ? (
+          <BotStatus
+            live={live || status === "done"}
+            status={status}
+            skill={skill}
+            model={model}
+            duration={duration}
+          />
+        ) : null}
+
+        {showProgress && (status === "running" || progress > 0) ? (
+          <BotProgress
+            percent={status === "done" ? 100 : progress}
+            label={progressLabel}
+            status={status === "idle" ? "running" : status}
+          />
+        ) : null}
+
+        <BotActivityStream steps={flowSteps} events={events} />
+      </div>
+    );
+  }
 
   return (
     <div className={cn("bot-visualizer", compact && "compact")}>
