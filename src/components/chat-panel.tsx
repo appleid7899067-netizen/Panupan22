@@ -138,11 +138,23 @@ export function ChatPanel() {
     if (hydrated && agent) ensureConversation(agent.id);
   }, [hydrated, agent?.id, ensureConversation]);
 
+  const stickToBottom = useRef(true);
+
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [convo?.messages.length, busy, agent?.id, convo?.messages[convo.messages.length - 1]?.content]);
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    stickToBottom.current = distance < 120;
+  }, [convo?.messages.length]);
+
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || !stickToBottom.current) return;
+    const frame = requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [convo?.messages.length, busy, agent?.id]);
 
   useEffect(() => {
     try {
@@ -600,7 +612,15 @@ export function ChatPanel() {
         </div>
       </div>
 
-      <div ref={scroller} className="boss-scroll flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+      <div
+        ref={scroller}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+          stickToBottom.current = distance < 120;
+        }}
+        className="boss-scroll flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6"
+      >
         {!convo || convo.messages.length === 0 ? (
           <div className="mx-auto flex w-full max-w-[1400px] flex-col items-start gap-4 pt-6">
             <div>
