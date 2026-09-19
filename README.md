@@ -13,6 +13,24 @@
 
 ---
 
+## เรียกบอทในห้องแชท
+
+บอทอยู่ห้องที่คุย **และเรียกสกิลเอง** ไม่ต้องส่งไปโหมดอื่น
+
+| ห้อง | วิธีเรียก |
+|---|---|
+| เว็บ | พิมพ์ใน Command Center ตามปกติ |
+| GitHub Copilot Chat | เลือก agent **BossnuGrok** (หรือ Teacher / Coder / …) |
+| GitHub Issue / PR | คอมเมนต์ `/boss คำถาม` |
+| Discord | slash `/boss` |
+| Telegram กลุ่ม | `/boss คำถาม` |
+| HTTP | `POST /api/chat` |
+
+คู่มือเต็ม: [`docs/CHAT_BOT.md`](docs/CHAT_BOT.md)  
+Agents: [`.github/agents/`](.github/agents/) · Skills: [`.github/skills/`](.github/skills/) · Kernel: [`src/lib/bossnugrok/chat-kernel.ts`](src/lib/bossnugrok/chat-kernel.ts)
+
+---
+
 ## 📸 Preview
 
 <p align="center">

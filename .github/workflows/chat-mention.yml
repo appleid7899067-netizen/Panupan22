@@ -1,0 +1,58 @@
+name: BossnuGrok chat mention
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  reply:
+    if: >
+      github.event.comment.user.type != 'Bot' &&
+      (startsWith(github.event.comment.body, '/boss') ||
+       startsWith(github.event.comment.body, '/Boss') ||
+       contains(github.event.comment.body, '@bossnugrok'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call chat kernel
+        env:
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENTS_URL: ${{ github.event.issue.comments_url }}
+        run: |
+          set -euo pipefail
+          if [ -z "${XAI_API_KEY:-}" ]; then
+            echo "XAI_API_KEY secret missing — skip model call"
+            exit 0
+          fi
+          TEXT="$(printf '%s' "$COMMENT_BODY" | sed -E 's|^/[Bb]oss[[:space:]]*||; s|@bossnugrok||g')"
+          JSON=$(jq -n --arg t "$TEXT" '{
+            model: "grok-4.5",
+            max_tokens: 800,
+            temperature: 0.4,
+            messages: [
+              {role:"system", content:"You are BossnuGrok commander by Phanuphan. Stay in this GitHub comment thread. Reply in the user language. No emoji. Be concise."},
+              {role:"user", content:$t}
+            ]
+          }')
+          RESP=$(curl -sS https://api.x.ai/v1/chat/completions \
+            -H "Authorization: Bearer $XAI_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$JSON")
+          REPLY=$(printf '%s' "$RESP" | jq -r '.choices[0].message.content // empty')
+          if [ -z "$REPLY" ]; then
+            echo "empty model reply"
+            printf '%s' "$RESP" | head -c 400
+            exit 0
+          fi
+          jq -n --arg b "$REPLY" '{body: $b}' > /tmp/comment.json
+          curl -sS -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            "$COMMENTS_URL" \
+            --data @/tmp/comment.json
