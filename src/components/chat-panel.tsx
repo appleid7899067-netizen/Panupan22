@@ -217,6 +217,15 @@ export function ChatPanel() {
       flow.start(skillStep);
       paintFlow(id, assistantId, flow);
 
+      if (files.length > 0) {
+        flow.event(
+          language === "th" ? "กำลังอ่านไฟล์ที่แนบ" : "Reading attached files",
+          "info",
+          "file",
+        );
+        paintFlow(id, assistantId, flow);
+      }
+
       const toolPack = await runAutoTools(payload, (chunk) => {
         const prev = useBossStore.getState().conversations.find((c) => c.id === id);
         const msg = prev?.messages.find((m) => m.id === assistantId);
@@ -236,6 +245,13 @@ export function ChatPanel() {
       });
 
       if (toolPack.skillCall) {
+        flow.event(
+          language === "th"
+            ? `กำลังรัน ${toolPack.skillCall.skillId}`
+            : `Running ${toolPack.skillCall.skillId}`,
+          "info",
+          "zap",
+        );
         flow.complete(skillStep, toolPack.skillCall.skillId);
         flow.event(
           language === "th" ? `เลือก ${toolPack.skillCall.skillId}` : `Selected ${toolPack.skillCall.skillId}`,
@@ -283,6 +299,11 @@ export function ChatPanel() {
             }
           : undefined;
 
+        flow.event(
+          language === "th" ? "กำลังเตรียมคำตอบ" : "Preparing response",
+          "info",
+          "bot",
+        );
         flow.start("model", modelMode === "auto" ? "auto" : modelMode);
         flow.event(
           language === "th" ? `เรียก ${shortModelLabel(modelMode === "auto" ? lastModelId : modelMode)}` : `Call ${shortModelLabel(modelMode === "auto" ? lastModelId : modelMode)}`,
@@ -302,6 +323,11 @@ export function ChatPanel() {
           const full = result.text;
           const step = Math.max(12, Math.floor(full.length / 40));
           flow.complete("process");
+          flow.event(
+            language === "th" ? "กำลังตรวจสอบผลลัพธ์" : "Verifying result",
+            "info",
+            "check",
+          );
           flow.start("render");
           await streamText(full, {
             delay: 20,
@@ -337,6 +363,11 @@ export function ChatPanel() {
               paintFlow(id, assistantId, flow, { content: next, skillCall: skillPatch }),
           });
           flow.complete("process");
+          flow.event(
+            language === "th" ? "กำลังตรวจสอบผลลัพธ์" : "Verifying result",
+            "info",
+            "check",
+          );
           flow.complete("render");
           flow.finishAll(true);
           paintFlow(
