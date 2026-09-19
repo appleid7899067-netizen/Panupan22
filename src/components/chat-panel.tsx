@@ -24,6 +24,7 @@ import { StreamingMessage } from "@/components/StreamingMessage";
 import { streamText } from "@/lib/bossnugrok/stream-text";
 import { InChatTools } from "@/components/InChatTools";
 import { ActivityTicker } from "@/components/ActivityTicker";
+import { BossAssistantThread } from "@/components/BossAssistantThread";
 
 type LocalFile = { name: string; mime: string; text: string; previewUrl?: string };
 type ApprovalRequest = { conversationId: string; messageId: string; command: string };
@@ -164,6 +165,7 @@ export function ChatPanel() {
   const [approval, setApproval] = useState<ApprovalRequest | null>(null);
   const [chatTheme, setChatTheme] = useState("lavender");
   const [attachmentSlide, setAttachmentSlide] = useState(0);
+  const [assistantUiMode, setAssistantUiMode] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -589,6 +591,18 @@ export function ChatPanel() {
       duration: i < 2 ? [5, 2][i] : undefined,
     }));
   }, [language]);
+  const assistantMessages = useMemo(
+    () =>
+      (convo?.messages ?? [])
+        .filter((message) => message.role === "user" || message.role === "assistant")
+        .map((message) => ({
+          id: message.id,
+          role: message.role as "user" | "assistant",
+          content: message.content,
+          createdAt: message.createdAt,
+        })),
+    [convo?.messages],
+  );
   const thinkingText = language === "th" ? "กำลังคิด…" : "Thinking…";
   const latestAssistant = convo?.messages.filter((m) => m.role === "assistant" && m.content).at(-1);
   const contextualComposerActions = useMemo(
@@ -599,7 +613,7 @@ export function ChatPanel() {
   if (!agent) return null;
 
   return (
-    <div className="chat-room flex h-full min-h-0 flex-col" data-chat-theme={chatTheme}>
+    <div className="chat-room relative flex h-full min-h-0 flex-col" data-chat-theme={chatTheme}>
       <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-[12px] border border-border bg-secondary">
@@ -658,6 +672,16 @@ export function ChatPanel() {
           </Button>
           <Button variant="ghost" size="icon" className="size-9" onClick={() => clearConversation(agent.id)} aria-label={t.newChat}>
             <Eraser className="size-4" />
+          </Button>
+          <Button
+            type="button"
+            variant={assistantUiMode ? "secondary" : "ghost"}
+            size="sm"
+            className="h-9 rounded-full px-3 text-xs"
+            onClick={() => setAssistantUiMode((value) => !value)}
+            title="เปิด Assistant UI"
+          >
+            {assistantUiMode ? "Boss UI" : "Assistant UI"}
           </Button>
           <BotFlowOptions />
         </div>
@@ -958,5 +982,28 @@ export function ChatPanel() {
         <p className="mx-auto mt-2 w-full max-w-[1400px] px-1 text-[11px] text-subtle">{modelHint}</p>
       </form>
     </div>
+      {assistantUiMode ? (
+        <div className="absolute inset-0 z-30 flex min-h-0 flex-col bg-background">
+          <div className="flex items-center justify-between border-b border-border px-4 py-2">
+            <div>
+              <p className="text-sm font-semibold">Boss Assistant UI</p>
+              <p className="text-[11px] text-muted-foreground">assistant-ui · ใช้ Boss Core เดิม</p>
+            </div>
+            <Button type="button" variant="ghost" size="sm" className="rounded-full" onClick={() => setAssistantUiMode(false)}>
+              ปิด
+            </Button>
+          </div>
+          <div className="min-h-0 flex-1 p-2 sm:p-3">
+            <BossAssistantThread
+              messages={assistantMessages}
+              isRunning={busy}
+              onSend={async (text) => {
+                await send(text);
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
+
   );
 }
