@@ -30,6 +30,8 @@ type ApprovalRequest = { conversationId: string; messageId: string; command: str
 
 const beat = () => new Promise((r) => setTimeout(r, 70));
 
+const paintTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
 function paintFlow(
   conversationId: string,
   messageId: string,
@@ -37,10 +39,30 @@ function paintFlow(
   extra: Partial<ChatMessage> = {},
   pending = true,
 ) {
-  useBossStore.getState().patchMessage(conversationId, messageId, {
+  const patch = {
     ...snapshotToPatch(flow.snapshot(pending)),
     ...extra,
-  });
+  };
+  const key = "$" + "{conversationId}:$" + "{messageId}";
+
+  // Streaming emits many updates per second. Persisting the whole workspace
+  // for every token causes visible jank, especially on mobile.
+  if (!pending) {
+    const timer = paintTimers.get(key);
+    if (timer) clearTimeout(timer);
+    paintTimers.delete(key);
+    useBossStore.getState().patchMessage(conversationId, messageId, patch);
+    return;
+  }
+
+  if (paintTimers.has(key)) return;
+  paintTimers.set(
+    key,
+    setTimeout(() => {
+      paintTimers.delete(key);
+      useBossStore.getState().patchMessage(conversationId, messageId, patch);
+    }, 120),
+  );
 }
 
 function quickNextActions(message: string, skillId?: string): string[] {
