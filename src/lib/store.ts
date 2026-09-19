@@ -37,7 +37,7 @@ export type CreatedImage = {
   id: string;
   prompt: string;
   url: string;
-  kind?: "image" | "video";
+  kind?: "image" | "video" | "audio";
   createdAt: number;
 };
 
