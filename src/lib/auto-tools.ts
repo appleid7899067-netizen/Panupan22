@@ -36,8 +36,19 @@ export async function runAutoTools(
   let toolText = "";
   let skillCall: SkillCall | undefined;
 
-  // 1) Explicit skill triggers (code-runner, etc.)
-  const seed = createSkillCall(userText);
+  // 1) Explicit triggers + implicit routing. The user talks normally;
+  // the agent selects the built-in skill instead of requiring magic words.
+  let routedText = userText;
+  if (/https?:\/\//i.test(userText) && /อ่าน|เปิด|ตรวจ|ดู|สรุป|analy[sz]e|read|open/i.test(userText)) {
+    routedText = "อ่านลิงก์ " + userText;
+  } else if (/prompt\s*lab|พรอมต์\s*แลบ|ทดลองพรอมต์|ทดสอบพรอมต์|ลอง prompt/i.test(userText)) {
+    routedText = "เรียก Prompt Lab " + userText;
+  } else if (/บทเรียน|เรียนรู้อะไรจาก|ความจำสกิล|skill memory|แก้พลาดอะไร|ข้อผิดพลาดที่ผ่านมา/i.test(userText)) {
+    routedText = "ดูบทเรียน " + userText;
+  } else if (/ค้นหา|ค้นข้อมูล|หาข้อมูล|ล่าสุด|ข่าว|ราคา|อากาศ|เว็บ|search|research/i.test(userText)) {
+    routedText = "ค้นหาเว็บ " + userText;
+  }
+  const seed = createSkillCall(routedText);
   if (seed && seed.status !== "pending") {
     used.push(seed.skillId);
     const updated = await executeSkill({ ...seed, status: "running" }, onStream);
