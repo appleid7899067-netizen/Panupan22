@@ -43,6 +43,17 @@ function paintFlow(
   });
 }
 
+function quickNextActions(message: string, skillId?: string): string[] {
+  const text = message.toLowerCase();
+  if (skillId === "image-create" || /สร้างภาพ|image/.test(text)) return ["ทำเป็นวิดีโอ", "แก้ภาพให้สวยขึ้น", "ทำอีก 3 แบบ", "เปิดใน Create Hub"];
+  if (skillId === "video-create" || /สร้างวิดีโอ|video/.test(text)) return ["สร้างอีกเวอร์ชัน", "เปลี่ยนเป็นแนวตั้ง", "เพิ่มเสียง", "เปิดใน Create Hub"];
+  if (skillId === "image-ocr" || /ocr|อ่านข้อความในภาพ/.test(text)) return ["สรุปข้อความ", "แปลเป็นอังกฤษ", "จัดเป็นเอกสาร", "อ่านออกเสียง"];
+  if (skillId === "speech-to-text" || /ถอดเสียง|transcri/.test(text)) return ["สรุปเสียง", "แปลภาษา", "จัดเป็นหัวข้อ", "สร้างเอกสาร"];
+  if (skillId === "text-to-speech" || /อ่านออกเสียง|เสียง/.test(text)) return ["เปลี่ยนเสียง", "พูดช้าลง", "สร้างอีกเวอร์ชัน", "บันทึกไว้ใน Create Hub"];
+  if (skillId === "voice-changer") return ["ลองเสียงอื่น", "อ่านข้อความใหม่", "สร้างไฟล์เสียงใหม่", "เปิดใน Create Hub"];
+  return ["ทำต่อให้เลย", "อธิบายขั้นตอน", "สร้างเวอร์ชันอื่น", "เปิดเครื่องมือที่เกี่ยวข้อง"];
+}
+
 function routeWorkspaceCommand(command: string, setWorkspaceMode: (mode: "command" | "create" | "sandbox" | "live" | "terminal" | "super" | "manus") => void) {
   const value = command.toLowerCase();
   const routes = [
@@ -607,6 +618,24 @@ export function ChatPanel() {
                         <StreamingMessage content={msg.content} isStreaming={!!msg.pending} />
                       ) : busy ? (
                         <p className="boss-shimmer text-sm">{t.thinking}</p>
+                      ) : null}
+                      {msg.role === "assistant" && !msg.pending && msg.content && msg.id === convo.messages[convo.messages.length - 1]?.id ? (
+                        <div className="mt-3 border-t border-border/70 pt-3">
+                          <p className="mb-2 text-[11px] text-subtle">{language === "th" ? "อยากให้ทำอะไรต่อ?" : "What should I do next?"}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {quickNextActions(msg.content, msg.skillCall?.skillId).map((action) => (
+                              <button
+                                key={action}
+                                type="button"
+                                disabled={busy}
+                                onClick={() => { void send(action); }}
+                                className="rounded-full border border-border bg-secondary/60 px-3 py-1.5 text-[11px] text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-50"
+                              >
+                                {action}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       ) : null}
                       {msg.skillCall ? (
                         <div className="mt-3">
