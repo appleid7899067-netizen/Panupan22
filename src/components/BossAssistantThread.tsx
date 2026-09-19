@@ -9,7 +9,7 @@ import {
   type AppendMessage,
   type ThreadMessageLike,
 } from "@assistant-ui/react";
-import { ArrowUp, Square } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 
 export type BossAssistantMessage = {
   id: string;
