@@ -15,6 +15,7 @@ export type PluginRecord = {
   skillId?: SkillDefinition["id"];
   permissions: string[];
   executable: boolean;
+  enabledByDefault: boolean;
 };
 
 const SKILL_CATEGORY: Record<string, string> = {
@@ -37,6 +38,7 @@ export const PLUGIN_CATALOG: PluginRecord[] = SKILLS.map((skill) => ({
   skillId: skill.id,
   permissions: skill.needsApproval ? ["user approval"] : [],
   executable: true,
+  enabledByDefault: true,
 }));
 
 export function getPluginById(id: string): PluginRecord | undefined {
