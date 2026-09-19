@@ -75,7 +75,7 @@ export function CreatePanel() {
           {presets.map((preset) => <button key={preset} type="button" onClick={() => setPrompt(preset)} className="rounded-full border border-border px-3 py-1.5 text-[11px] text-muted-foreground hover:bg-secondary">{preset}</button>)}
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <select value={kind} onChange={(e) => setKind(e.target.value as "image" | "video")} className="h-10 rounded-[var(--radius-md)] border border-border bg-card px-3 text-xs outline-none"><option value="image">ภาพ</option><option value="video">วิดีโอ</option></select>
+          <select value={kind} onChange={(e) => { const next = e.target.value as "image" | "video"; setKind(next); setModel(next === "video" ? "sora-2" : "gpt-image-1-mini"); }} className="h-10 rounded-[var(--radius-md)] border border-border bg-card px-3 text-xs outline-none"><option value="image">ภาพ</option><option value="video">วิดีโอ</option></select>
           <select value={provider} onChange={(e) => selectProvider(e.target.value)} className="h-10 rounded-[var(--radius-md)] border border-border bg-card px-3 text-xs outline-none">
             <option value="openai-image-generation">OpenAI Image</option>
             <option value="gemini">Gemini Image</option>
