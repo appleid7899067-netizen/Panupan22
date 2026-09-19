@@ -28,7 +28,7 @@ const labels = {
     deploy: "Deploy",
     mcp: "MCP",
     live: "Live",
-    settings: "ตั้งค่า",
+    settings: "ตั้งค่า",\n    botflow: "BotFlow",
   },
   en: {
     commander: "COMMANDER",
@@ -47,17 +47,17 @@ const labels = {
     deploy: "Deploy",
     mcp: "MCP",
     live: "Live",
-    settings: "Settings",
+    settings: "Settings",\n    botflow: "BotFlow",
   },
 } as const;
 
-const workspaceItems: { mode: WorkspaceMode; icon: LucideIcon; key: "newTask" | "research" | "build" | "browser" | "code" | "live" }[] = [
+const workspaceItems: { mode: WorkspaceMode; icon: LucideIcon; key: "newTask" | "research" | "build" | "browser" | "code" | "live" | "botflow" }[] = [
   { mode: "command", icon: Sparkles, key: "newTask" },
   { mode: "manus", icon: Globe2, key: "browser" },
   { mode: "sandbox", icon: Code2, key: "code" },
   { mode: "live", icon: Activity, key: "live" },
   { mode: "super", icon: Bot, key: "research" },
-  { mode: "apps", icon: Boxes, key: "build" },
+  { mode: "apps", icon: Boxes, key: "build" },\n  { mode: "botflow", icon: GitBranch, key: "botflow" },
 ];
 
 const toolItems: { icon: LucideIcon; key: "research" | "code" | "browser" | "files" | "deploy" | "mcp" }[] = [

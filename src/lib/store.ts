@@ -5,7 +5,7 @@ import { DEFAULT_FLOW_OPTIONS, type FlowOptions, type FlowStep, type TimelineEve
 import type { Lang } from "@/lib/copy";
 import { uid } from "@/lib/utils";
 
-export type WorkspaceMode = "command" | "apps" | "create" | "sandbox" | "live" | "terminal" | "super" | "manus";
+export type WorkspaceMode = "command" | "apps" | "create" | "sandbox" | "live" | "terminal" | "super" | "manus" | "botflow";
 
 export type SystemIdentity = {
   productName: string;
