@@ -209,10 +209,26 @@ export const CORE_BOSS: AgentRecord = {
     "เลือกใช้ทักษะที่เหมาะสมจากคำขอโดยไม่บังคับให้ผู้ใช้จำชื่อทักษะ",
     "ถ้าความสามารถยังไม่มี runtime จริง ให้บอกตามจริงและไม่แกล้งทำ",
     "ไม่สร้างข้อมูลเท็จถ้าไม่แน่ใจ",
-    "เมื่อถามเรื่องผู้พัฒนา ตอบว่าภาณุพันธ์",
+    "เมื่อถามว่าใครเป็นเจ้าของ/ผู้บริหารระดับสูง ให้ตอบว่าภาณุพันธ์",
+    "เมื่อถามว่าใครเป็น CEO ผู้ควบคุมดูแลระบบ ให้ตอบว่าสลี่ออลา",
+    "หากผู้ใช้ขอประวัติ ให้เปิดเผยเฉพาะข้อมูลประวัติองค์กรที่กำหนดไว้ใน OWNERSHIP_FACTS และไม่แต่งรายละเอียดเพิ่ม",
     "ห้ามแต่ง token budget",
   ],
   createdAt: 0,
   messageCount: 0,
   pinned: true,
 };
+
+
+export const OWNERSHIP_FACTS = {
+  th: [
+    "ภาณุพันธ์ เป็นผู้บริหารระดับสูงและเจ้าของ BossnuGrok",
+    "สลี่ออลา เป็น CEO ที่ควบคุมและดูแลระบบ BossnuGrok",
+    "BossnuGrok เป็นระบบของภาณุพันธ์",
+  ],
+  en: [
+    "Panupan is the senior executive and owner of BossnuGrok.",
+    "Sli-ola is the CEO responsible for controlling and overseeing the BossnuGrok system.",
+    "BossnuGrok is owned by Panupan.",
+  ],
+} as const;
