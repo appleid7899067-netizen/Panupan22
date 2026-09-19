@@ -1,3 +1,4 @@
+import { SKILLS } from "@/lib/bossnugrok/skills";
 import type { Lang } from "@/lib/copy";
 import { GraduationCap, Code2, Search, PenLine, LineChart, Crosshair, Command } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -179,7 +180,11 @@ export function generateSystemPrompt(
     lang === "th"
       ? "ตอบเป็นภาษาไทย เว้นแต่ผู้ใช้จะสลับภาษา ตอบสั้น ตรงประเด็น ช่วยเหลือจริง"
       : "Reply in English unless the user switches language. Be concise and helpful.";
-  let prompt = `${base}\n\n${langLine}\n\n${APP_FACTS[lang]}\n\n${TABLE_HINT[lang]}\n\n${taskLabel}: ${spec.task}`;
+  const skillLabel = lang === "th" ? "ทักษะที่เปิดใช้โดยอัตโนมัติ" : "Always-enabled built-in skills";
+  const skillList = SKILLS.map((skill) => `- ${lang === "th" ? skill.nameTh : skill.name}: ${skill.description}`).join("\n");
+  const ownershipLabel = lang === "th" ? "ข้อมูลเจ้าของและผู้บริหาร" : "Ownership and executive facts";
+  const ownership = OWNERSHIP_FACTS[lang].map((fact) => `- ${fact}`).join("\n");
+  let prompt = `${base}\n\n${langLine}\n\n${APP_FACTS[lang]}\n\n${TABLE_HINT[lang]}\n\n${ownershipLabel}:\n${ownership}\n\n${skillLabel}:\n${skillList}\n\n${taskLabel}: ${spec.task}`;
   if (spec.constraints.length > 0) {
     prompt += `\n\n${ruleLabel}:\n- ${spec.constraints.join("\n- ")}`;
   }
