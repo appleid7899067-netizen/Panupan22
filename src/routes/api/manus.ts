@@ -76,11 +76,12 @@ export const Route = createFileRoute("/api/manus")({
           return manusFetch(request, `/task.listMessages?task_id=${encodeURIComponent(taskId)}&order=asc&limit=${limit}`);
         }
         if (action === "projects") return manusFetch(request, "/project.list");
+        if (action === "browsers") return manusFetch(request, "/browser.onlineList");
         return json({ ok: false, error: "Unsupported action" }, 400);
       },
       POST: async ({ request }) => {
         if (!sameOrigin(request)) return json({ ok: false, error: "Cross-origin request blocked." }, 403);
-        let body: { action?: string; prompt?: string; taskId?: string; apiKey?: string };
+        let body: { action?: string; prompt?: string; taskId?: string; eventId?: string; apiKey?: string; input?: Record<string, unknown> };
         try { body = (await request.json()) as typeof body; } catch { return json({ ok: false, error: "Invalid JSON" }, 400); }
 
         if (body.action === "configure") {
@@ -102,6 +103,15 @@ export const Route = createFileRoute("/api/manus")({
           if (!prompt) return json({ ok: false, error: "Prompt is required." }, 400);
           if (prompt.length > 12000) return json({ ok: false, error: "Prompt is too long." }, 413);
           return manusFetch(request, "/task.create", { method: "POST", body: JSON.stringify({ message: { content: prompt } }) });
+        }
+
+        if (body.action === "confirm") {
+          const taskId = body.taskId?.trim() ?? "";
+          const eventId = body.eventId?.trim() ?? "";
+          if (!taskId || !eventId) return json({ ok: false, error: "taskId and eventId are required." }, 400);
+          let input: unknown = undefined;
+          if (body.input && typeof body.input === "object") input = body.input;
+          return manusFetch(request, "/task.confirmAction", { method: "POST", body: JSON.stringify({ task_id: taskId, event_id: eventId, ...(input !== undefined ? { input } : {}) }) });
         }
 
         if (body.action === "stop") {
