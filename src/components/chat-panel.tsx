@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowUp, Eraser, Paperclip, Search, X } from "lucide-react";
+import { ArrowUp, Eraser, Paperclip, Search, X, ChevronLeft, ChevronRight, Image as ImageIcon, FileText } from "lucide-react";
 import { Markdown } from "@/components/markdown";
 import { ApprovalCard } from "@/components/ApprovalCard";
 import { BotFlowOptions } from "@/components/BotFlowOptions";
@@ -25,7 +25,7 @@ import { streamText } from "@/lib/bossnugrok/stream-text";
 import { InChatTools } from "@/components/InChatTools";
 import { ActivityTicker } from "@/components/ActivityTicker";
 
-type LocalFile = { name: string; mime: string; text: string };
+type LocalFile = { name: string; mime: string; text: string; previewUrl?: string };
 type ApprovalRequest = { conversationId: string; messageId: string; command: string };
 
 const beat = () => new Promise((r) => setTimeout(r, 70));
@@ -79,7 +79,7 @@ async function readFile(file: File): Promise<LocalFile> {
       reader.onerror = () => reject(reader.error);
       reader.readAsDataURL(file);
     });
-    return { name: file.name, mime, text: `[image data-url omitted, length=${data.length}]` };
+    return { name: file.name, mime, text: "[image attached]", previewUrl: data };
   }
   const text = await file.text();
   return { name: file.name, mime, text: text.slice(0, 24_000) };
@@ -117,6 +117,7 @@ export function ChatPanel() {
   const [remoteModels, setRemoteModels] = useState<FreeModel[]>([]);
   const [approval, setApproval] = useState<ApprovalRequest | null>(null);
   const [chatTheme, setChatTheme] = useState("lavender");
+  const [attachmentSlide, setAttachmentSlide] = useState(0);
   const scroller = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -822,15 +823,25 @@ export function ChatPanel() {
 
       <form onSubmit={onSubmit} className="border-t border-border p-3 sm:p-4">
         {files.length > 0 ? (
-          <div className="mx-auto mb-2 flex w-full max-w-[1400px] flex-wrap gap-2">
-            {files.map((f) => (
-              <span key={f.name} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px]">
-                {f.name}
-                <button type="button" onClick={() => setFiles((prev) => prev.filter((x) => x.name !== f.name))} aria-label="remove">
-                  <X className="size-3" />
+          <div className="mx-auto mb-3 w-full max-w-[1400px] overflow-hidden rounded-2xl border border-border bg-card/80 shadow-sm">
+            <div className="flex items-center justify-between border-b border-border/70 px-3 py-2">
+              <div className="flex items-center gap-2 text-xs font-medium"><Paperclip className="size-3.5" /><span>{files.length} {language === "th" ? "ไฟล์แนบ" : "attachments"}</span></div>
+              <div className="flex items-center gap-1">
+                <button type="button" disabled={files.length < 2} onClick={() => setAttachmentSlide((v) => (v - 1 + files.length) % files.length)} className="rounded-full p-1.5 hover:bg-secondary disabled:opacity-30" aria-label="previous attachment"><ChevronLeft className="size-4" /></button>
+                <span className="min-w-10 text-center text-[10px] text-muted-foreground">{Math.min(attachmentSlide + 1, files.length)}/{files.length}</span>
+                <button type="button" disabled={files.length < 2} onClick={() => setAttachmentSlide((v) => (v + 1) % files.length)} className="rounded-full p-1.5 hover:bg-secondary disabled:opacity-30" aria-label="next attachment"><ChevronRight className="size-4" /></button>
+              </div>
+            </div>
+            <div className="flex gap-2 overflow-x-auto p-2">
+              {files.map((f, i) => (
+                <button key={f.name} type="button" onClick={() => setAttachmentSlide(i)} className={cn("relative shrink-0 overflow-hidden rounded-xl border text-left transition", i === attachmentSlide ? "border-primary ring-1 ring-primary/30" : "border-border hover:border-primary/40")} aria-label={f.name}>
+                  {f.previewUrl ? <img src={f.previewUrl} alt={f.name} className="h-20 w-28 object-cover" /> : <div className="flex h-20 w-28 flex-col items-center justify-center gap-1 bg-secondary px-2"><FileText className="size-5 text-muted-foreground" /><span className="max-w-full truncate text-[10px]">{f.name}</span></div>}
+                  <span className="absolute bottom-0 left-0 right-0 truncate bg-background/80 px-1.5 py-1 text-[9px]">{f.name}</span>
+                  <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); setFiles((prev) => prev.filter((_, n) => n !== i)); setAttachmentSlide((v) => Math.max(0, Math.min(v, files.length - 2))); }} className="absolute right-1 top-1 rounded-full bg-background/85 p-1" aria-label="remove attachment"><X className="size-3" /></span>
                 </button>
-              </span>
-            ))}
+              ))}
+            </div>
+            {files[attachmentSlide]?.previewUrl ? <img src={files[attachmentSlide].previewUrl} alt="" className="max-h-56 w-full object-contain bg-black/5 px-2 pb-2" /> : files[attachmentSlide] ? <div className="px-3 pb-3 text-xs text-muted-foreground"><FileText className="mr-1 inline size-3.5" />{files[attachmentSlide].mime}</div> : null}
           </div>
         ) : null}
         <div className="mx-auto flex w-full max-w-[1400px] items-end gap-2 rounded-[24px] border border-border bg-card px-3 py-2">
