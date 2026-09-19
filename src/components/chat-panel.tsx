@@ -583,6 +583,11 @@ export function ChatPanel() {
     }));
   }, [language]);
   const thinkingText = language === "th" ? "กำลังคิด…" : "Thinking…";
+  const latestAssistant = convo?.messages.filter((m) => m.role === "assistant" && m.content).at(-1);
+  const contextualComposerActions = useMemo(
+    () => contextualActions(draft || latestAssistant?.content || "", latestAssistant?.skillCall?.skillId, files.length > 0),
+    [draft, latestAssistant?.content, latestAssistant?.skillCall?.skillId, files.length],
+  );
 
   if (!agent) return null;
 
@@ -901,6 +906,24 @@ export function ChatPanel() {
               ))}
             </div>
             {files[attachmentSlide]?.previewUrl ? <img src={files[attachmentSlide].previewUrl} alt="" className="max-h-56 w-full object-contain bg-black/5 px-2 pb-2" /> : files[attachmentSlide] ? <div className="px-3 pb-3 text-xs text-muted-foreground"><FileText className="mr-1 inline size-3.5" />{files[attachmentSlide].mime}</div> : null}
+          </div>
+        ) : null}
+        {contextualComposerActions.length > 0 ? (
+          <div className="mx-auto mb-2 flex w-full max-w-[1400px] flex-wrap gap-2" aria-label={language === "th" ? "ตัวเลือกตามบริบท" : "Contextual actions"}>
+            {contextualComposerActions.map((action) => (
+              <button
+                key={action}
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setDraft(action);
+                  requestAnimationFrame(() => void send(action));
+                }}
+                className="rounded-full border border-border bg-secondary/70 px-3 py-1.5 text-[11px] text-muted-foreground transition hover:border-primary/40 hover:bg-secondary hover:text-foreground disabled:opacity-50"
+              >
+                {action}
+              </button>
+            ))}
           </div>
         ) : null}
         <div className="mx-auto flex w-full max-w-[1400px] items-end gap-2 rounded-[24px] border border-border bg-card px-3 py-2">
