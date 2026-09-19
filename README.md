@@ -196,3 +196,5 @@ MIT
 **BossnuGrok** — Sit in the commander seat. Give the order. Let the system handle the rest.
 
 Developed by **ภาณุพันธ์ (Panupan)**
+
+<!-- Vercel production redeploy trigger: 2026-09-19 -->
