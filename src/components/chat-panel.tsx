@@ -513,7 +513,7 @@ export function ChatPanel() {
 
       <div ref={scroller} className="boss-scroll flex-1 overflow-y-auto px-4 py-5 sm:px-6">
         {!convo || convo.messages.length === 0 ? (
-          <div className="mx-auto flex max-w-xl flex-col items-start gap-4 pt-6">
+          <div className="mx-auto flex w-full max-w-[1400px] flex-col items-start gap-4 pt-6">
             <div>
               <p className="font-display text-2xl tracking-tight">{t.emptyTitle}</p>
               <p className="mt-1 text-sm text-muted-foreground">{t.emptyBody}</p>
@@ -556,7 +556,7 @@ export function ChatPanel() {
             </div>
           </div>
         ) : (
-          <div className="mx-auto flex max-w-2xl flex-col gap-5">
+          <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-5">
             {convo.messages.map((msg) => (
               <div key={msg.id} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
                 <div
@@ -716,7 +716,7 @@ export function ChatPanel() {
 
       <form onSubmit={onSubmit} className="border-t border-border p-3 sm:p-4">
         {files.length > 0 ? (
-          <div className="mx-auto mb-2 flex max-w-2xl flex-wrap gap-2">
+          <div className="mx-auto mb-2 flex w-full max-w-[1400px] flex-wrap gap-2">
             {files.map((f) => (
               <span key={f.name} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px]">
                 {f.name}
@@ -727,7 +727,7 @@ export function ChatPanel() {
             ))}
           </div>
         ) : null}
-        <div className="mx-auto flex max-w-2xl items-end gap-2 rounded-[24px] border border-border bg-card px-3 py-2">
+        <div className="mx-auto flex w-full max-w-[1400px] items-end gap-2 rounded-[24px] border border-border bg-card px-3 py-2">
           <input
             ref={fileRef}
             type="file"
@@ -749,7 +749,7 @@ export function ChatPanel() {
             <ArrowUp className="size-4" />
           </Button>
         </div>
-        <p className="mx-auto mt-2 max-w-2xl px-1 text-[11px] text-subtle">{modelHint}</p>
+        <p className="mx-auto mt-2 w-full max-w-[1400px] px-1 text-[11px] text-subtle">{modelHint}</p>
       </form>
     </div>
   );
