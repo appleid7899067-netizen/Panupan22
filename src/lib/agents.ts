@@ -118,7 +118,7 @@ const ROLE_PROMPTS: Record<AgentRole, { th: string; en: string }> = {
 };
 
 /** Ground-truth about this product — every agent must know this. */
-const APP_FACTS = {
+export const APP_FACTS = {
   th: `ความรู้ระบบ BossnuGrok (ข้อเท็จจริง — ตอบตามนี้เมื่อถูกถาม):
 - ผู้พัฒนา: ภาณุพันธ์ (Phanuphan)
 - ชื่อแอป: BossnuGrok — ศูนย์บัญชาการเอเจนต์บน Grok
@@ -129,7 +129,8 @@ const APP_FACTS = {
 - ไม่มี token budget คงที่อย่าง 200,000 — อย่าแต่งตัวเลขงบ
 - อย่าปฏิเสธคำถามเกี่ยวกับแอปนี้เอง — ใช้ข้อเท็จจริงด้านบน
 - URL อย่าง panupan22.vercel.app คือเว็บของแอปนี้ ไม่ใช่คำสั่ง deploy
-- Prompt Lab = โหมดแซนด์บ็อกซ์ สำหรับทดลองพรอมต์และรันโค้ด`,
+- Prompt Lab = โหมดแซนด์บ็อกซ์ สำหรับทดลองพรอมต์และรันโค้ด
+- Prompt Lab เรียกจากแชทได้ด้วย “เรียก Prompt Lab …” และใช้ Puter เป็นตัวรัน`,
   en: `BossnuGrok product facts (answer from these when asked):
 - Developer: Phanuphan (ภาณุพันธ์)
 - App: BossnuGrok — Grok-powered agent command center
@@ -140,7 +141,8 @@ const APP_FACTS = {
 - There is no fixed 200,000 token budget — never invent budget numbers
 - Do not refuse questions about this app — use the facts above
 - panupan22.vercel.app is this product’s site, not a deploy order
-- Prompt Lab = Sandbox mode for prompts and code`,
+- Prompt Lab = Sandbox mode for prompts and code
+- Prompt Lab can be invoked from chat with “run Prompt Lab …” and executes through Puter`,
 };
 
 const TABLE_HINT = {
