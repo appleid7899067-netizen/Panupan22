@@ -24,6 +24,7 @@ import { StreamingMessage } from "@/components/StreamingMessage";
 import { streamText } from "@/lib/bossnugrok/stream-text";
 import { InChatTools } from "@/components/InChatTools";
 import { ActivityTicker } from "@/components/ActivityTicker";
+import { ResultCard } from "@/components/ResultCard";
 
 type LocalFile = { name: string; mime: string; text: string };
 type ApprovalRequest = { conversationId: string; messageId: string; command: string };
@@ -693,6 +694,14 @@ export function ChatPanel() {
                         <StreamingMessage content={msg.content} isStreaming={!!msg.pending} />
                       ) : busy ? (
                         <p className="boss-shimmer text-sm">{t.thinking}</p>
+                      ) : null}
+                      {msg.role === "assistant" && !msg.pending && msg.content ? (
+                        <ResultCard
+                          text={msg.content}
+                          model={msg.model ? shortModelLabel(msg.model) : undefined}
+                          durationMs={msg.durationMs}
+                          skill={msg.skillCall?.skillId}
+                        />
                       ) : null}
                       {msg.role === "assistant" && !msg.pending && msg.content && msg.id === convo.messages[convo.messages.length - 1]?.id ? (
                         <div className="mt-3 border-t border-border/70 pt-3">
