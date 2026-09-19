@@ -34,8 +34,20 @@ export type PuterChatOptions = {
   normalize?: boolean;
 };
 
+export type PuterImageOptions = {
+  provider?: string;
+  model?: string;
+  quality?: string;
+  ratio?: { w: number; h: number };
+  input_image?: string;
+  input_images?: string[];
+  test_mode?: boolean;
+  puter_output_path?: string;
+};
+
 type PuterAiApi = {
   chat: (prompt: string | PuterChatMessage[], options?: PuterChatOptions) => Promise<unknown>;
+  txt2img?: (prompt: string, options?: PuterImageOptions | boolean) => Promise<HTMLImageElement>;
   listModels?: (provider?: string) => Promise<unknown>;
 };
 
