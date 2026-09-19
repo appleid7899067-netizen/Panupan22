@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { AgentList } from "@/components/agent-list";
 import { ChatPanel } from "@/components/chat-panel";
+import { CommanderRail } from "@/components/commander-rail";
 import { CreatePanel } from "@/components/create-panel";
 import { ForgePanel } from "@/components/forge-panel";
 import { LiveStreamPanel } from "@/components/live-stream-panel";
@@ -306,7 +307,15 @@ export function CommandCenter() {
         })}
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_300px]">
+      <div className="flex min-h-0 flex-1">
+        <CommanderRail
+          activeMode={workspaceMode}
+          onMode={setWorkspaceMode}
+          onAgents={() => setAgentsOpen(true)}
+          onForge={() => setForgeOpen(true)}
+          language={language}
+        />
+        <div className="grid min-w-0 min-h-0 flex-1 grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_300px]">
         <aside className="hidden min-h-0 border-r border-border lg:block">
           <div className="flex h-full flex-col">
             <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
@@ -359,6 +368,7 @@ export function CommandCenter() {
             </div>
           </div>
         </aside>
+        </div>
       </div>
 
       <p className="hidden border-t border-border px-4 py-1.5 text-center text-[10px] tracking-wide text-subtle sm:block" suppressHydrationWarning>
