@@ -24,6 +24,7 @@ import { StreamingMessage } from "@/components/StreamingMessage";
 import { streamText } from "@/lib/bossnugrok/stream-text";
 import { InChatTools } from "@/components/InChatTools";
 import { ActivityTicker } from "@/components/ActivityTicker";
+import { CommandTemplates } from "@/components/CommandTemplates";
 
 type LocalFile = { name: string; mime: string; text: string };
 type ApprovalRequest = { conversationId: string; messageId: string; command: string };
@@ -818,7 +819,10 @@ export function ChatPanel() {
         )}
       </div>
 
-      <div className="px-3 sm:px-4"><InChatTools /></div>
+      <div className="px-3 sm:px-4">
+        <CommandTemplates onSelect={(command) => { setDraft(command); }} disabled={busy} />
+        <InChatTools />
+      </div>
 
       <form onSubmit={onSubmit} className="border-t border-border p-3 sm:p-4">
         {files.length > 0 ? (
