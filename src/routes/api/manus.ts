@@ -81,7 +81,7 @@ export const Route = createFileRoute("/api/manus")({
       },
       POST: async ({ request }) => {
         if (!sameOrigin(request)) return json({ ok: false, error: "Cross-origin request blocked." }, 403);
-        let body: { action?: string; prompt?: string; taskId?: string; eventId?: string; apiKey?: string; input?: Record<string, unknown> };
+        let body: { action?: string; prompt?: string; taskId?: string; eventId?: string; apiKey?: string; useBrowser?: boolean; input?: Record<string, unknown> };
         try { body = (await request.json()) as typeof body; } catch { return json({ ok: false, error: "Invalid JSON" }, 400); }
 
         if (body.action === "configure") {
@@ -102,7 +102,7 @@ export const Route = createFileRoute("/api/manus")({
           const prompt = body.prompt?.trim() ?? "";
           if (!prompt) return json({ ok: false, error: "Prompt is required." }, 400);
           if (prompt.length > 12000) return json({ ok: false, error: "Prompt is too long." }, 413);
-          return manusFetch(request, "/task.create", { method: "POST", body: JSON.stringify({ message: { content: prompt } }) });
+          return manusFetch(request, "/task.create", { method: "POST", body: JSON.stringify({ message: { content: prompt, ...(body.useBrowser ? { connectors: ["be268223-40b2-4f3c-a907-c12eb1699283"] } : {}) } }) });
         }
 
         if (body.action === "confirm") {
