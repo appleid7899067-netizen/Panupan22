@@ -31,6 +31,7 @@ type ApprovalRequest = { conversationId: string; messageId: string; command: str
 const beat = () => new Promise((r) => setTimeout(r, 70));
 
 const paintTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const pendingPaints = new Map<string, { conversationId: string; messageId: string; patch: Partial<ChatMessage> }>();
 
 function paintFlow(
   conversationId: string,
@@ -45,35 +46,58 @@ function paintFlow(
   };
   const key = "$" + "{conversationId}:$" + "{messageId}";
 
-  // Streaming emits many updates per second. Persisting the whole workspace
-  // for every token causes visible jank, especially on mobile.
+  // Keep only the newest frame. This reduces persisted Zustand writes without
+  // making the activity display lag behind the stream.
   if (!pending) {
     const timer = paintTimers.get(key);
     if (timer) clearTimeout(timer);
     paintTimers.delete(key);
+    pendingPaints.delete(key);
     useBossStore.getState().patchMessage(conversationId, messageId, patch);
     return;
   }
 
+  pendingPaints.set(key, { conversationId, messageId, patch });
   if (paintTimers.has(key)) return;
+
   paintTimers.set(
     key,
     setTimeout(() => {
       paintTimers.delete(key);
-      useBossStore.getState().patchMessage(conversationId, messageId, patch);
+      const latest = pendingPaints.get(key);
+      if (!latest) return;
+      pendingPaints.delete(key);
+      useBossStore.getState().patchMessage(latest.conversationId, latest.messageId, latest.patch);
     }, 120),
   );
 }
 
-function quickNextActions(message: string, skillId?: string): string[] {
-  const text = message.toLowerCase();
-  if (skillId === "image-create" || /สร้างภาพ|image/.test(text)) return ["ทำเป็นวิดีโอ", "แก้ภาพให้สวยขึ้น", "ทำอีก 3 แบบ", "เปิดใน Create Hub"];
-  if (skillId === "video-create" || /สร้างวิดีโอ|video/.test(text)) return ["สร้างอีกเวอร์ชัน", "เปลี่ยนเป็นแนวตั้ง", "เพิ่มเสียง", "เปิดใน Create Hub"];
-  if (skillId === "image-ocr" || /ocr|อ่านข้อความในภาพ/.test(text)) return ["สรุปข้อความ", "แปลเป็นอังกฤษ", "จัดเป็นเอกสาร", "อ่านออกเสียง"];
-  if (skillId === "speech-to-text" || /ถอดเสียง|transcri/.test(text)) return ["สรุปเสียง", "แปลภาษา", "จัดเป็นหัวข้อ", "สร้างเอกสาร"];
-  if (skillId === "text-to-speech" || /อ่านออกเสียง|เสียง/.test(text)) return ["เปลี่ยนเสียง", "พูดช้าลง", "สร้างอีกเวอร์ชัน", "บันทึกไว้ใน Create Hub"];
-  if (skillId === "voice-changer") return ["ลองเสียงอื่น", "อ่านข้อความใหม่", "สร้างไฟล์เสียงใหม่", "เปิดใน Create Hub"];
-  return ["ทำต่อให้เลย", "อธิบายขั้นตอน", "สร้างเวอร์ชันอื่น", "เปิดเครื่องมือที่เกี่ยวข้อง"];
+function contextualActions(text: string, skillId?: string, hasFiles = false): string[] {
+  const value = text.toLowerCase();
+  const actions: string[] = [];
+  const add = (...items: string[]) => {
+    for (const item of items) if (!actions.includes(item)) actions.push(item);
+  };
+
+  if (skillId === "image-create" || /สร้างภาพ|วาดภาพ|image/.test(value)) {
+    add("แก้ภาพให้สวยขึ้น", "ทำอีก 3 แบบ", "เปลี่ยนสไตล์", "ทำเป็นวิดีโอ");
+  } else if (skillId === "video-create" || /สร้างวิดีโอ|ทำวิดีโอ|video/.test(value)) {
+    add("สร้างอีกเวอร์ชัน", "เปลี่ยนเป็นแนวตั้ง", "เพิ่มเสียง", "ตัดให้สั้นลง");
+  } else if (skillId === "code-review" || /โค้ด|code|error|bug|เออเรอร์/.test(value)) {
+    add("ตรวจโค้ดให้เลย", "รันทดสอบ", "แก้ Error ให้เลย", "อธิบายจุดที่พัง");
+  } else if (skillId === "web-search" || /ค้นหา|ล่าสุด|ข่าว|ราคา|ข้อมูล|เว็บ|research/.test(value)) {
+    add("ค้นเพิ่ม", "สรุปให้สั้น", "เปรียบเทียบข้อมูล", "เปิดแหล่งข้อมูล");
+  } else if (skillId === "link-follower" || /https?:\/\//.test(value)) {
+    add("ตรวจลิงก์", "สรุปหน้านี้", "ตรวจสถานะเว็บ", "วิเคราะห์ต่อ");
+  } else if (skillId === "doc-reader" || hasFiles || /เอกสาร|ไฟล์|document/.test(value)) {
+    add("สรุปไฟล์", "ค้นในไฟล์", "แปลไฟล์", "จัดเป็นหัวข้อ");
+  } else if (skillId === "translate" || /แปล|translate/.test(value)) {
+    add("แปลให้ละเอียดขึ้น", "สรุปข้อความ", "ปรับภาษาให้ธรรมชาติ", "แปลกลับเพื่อตรวจ");
+  } else {
+    add("ทำต่อให้เลย", "ตรวจคำตอบ", "ขยายรายละเอียด");
+  }
+
+  return actions.slice(0, 4);
 }
 
 function routeWorkspaceCommand(command: string, setWorkspaceMode: (mode: "command" | "create" | "sandbox" | "live" | "terminal" | "super" | "manus") => void) {
@@ -566,6 +590,11 @@ export function ChatPanel() {
     }));
   }, [language]);
   const thinkingText = language === "th" ? "กำลังคิด…" : "Thinking…";
+  const latestAssistant = convo?.messages.filter((m) => m.role === "assistant" && m.content).at(-1);
+  const contextualComposerActions = useMemo(
+    () => contextualActions(draft || latestAssistant?.content || "", latestAssistant?.skillCall?.skillId, files.length > 0),
+    [draft, latestAssistant?.content, latestAssistant?.skillCall?.skillId, files.length],
+  );
 
   if (!agent) return null;
 
@@ -739,9 +768,9 @@ export function ChatPanel() {
                       ) : null}
                       {msg.role === "assistant" && !msg.pending && msg.content && msg.id === convo.messages[convo.messages.length - 1]?.id ? (
                         <div className="mt-3 border-t border-border/70 pt-3">
-                          <p className="mb-2 text-[11px] text-subtle">{language === "th" ? "อยากให้ทำอะไรต่อ?" : "What should I do next?"}</p>
+                          <p className="mb-2 text-[11px] text-subtle">{language === "th" ? "ตามบริบทนี้ บอสทำต่อได้" : "Contextual actions"}</p>
                           <div className="flex flex-wrap gap-2">
-                            {quickNextActions(msg.content, msg.skillCall?.skillId).map((action) => (
+                            {contextualActions(draft || msg.content, msg.skillCall?.skillId, files.length > 0).map((action) => (
                               <button
                                 key={action}
                                 type="button"
@@ -884,6 +913,24 @@ export function ChatPanel() {
               ))}
             </div>
             {files[attachmentSlide]?.previewUrl ? <img src={files[attachmentSlide].previewUrl} alt="" className="max-h-56 w-full object-contain bg-black/5 px-2 pb-2" /> : files[attachmentSlide] ? <div className="px-3 pb-3 text-xs text-muted-foreground"><FileText className="mr-1 inline size-3.5" />{files[attachmentSlide].mime}</div> : null}
+          </div>
+        ) : null}
+        {contextualComposerActions.length > 0 ? (
+          <div className="mx-auto mb-2 flex w-full max-w-[1400px] flex-wrap gap-2" aria-label={language === "th" ? "ตัวเลือกตามบริบท" : "Contextual actions"}>
+            {contextualComposerActions.map((action) => (
+              <button
+                key={action}
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setDraft(action);
+                  requestAnimationFrame(() => void send(action));
+                }}
+                className="rounded-full border border-border bg-secondary/70 px-3 py-1.5 text-[11px] text-muted-foreground transition hover:border-primary/40 hover:bg-secondary hover:text-foreground disabled:opacity-50"
+              >
+                {action}
+              </button>
+            ))}
           </div>
         ) : null}
         <div className="mx-auto flex w-full max-w-[1400px] items-end gap-2 rounded-[24px] border border-border bg-card px-3 py-2">
