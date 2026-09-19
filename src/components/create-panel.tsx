@@ -19,8 +19,10 @@ export function CreatePanel() {
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [kind, setKind] = useState<"image" | "video">("image");
   const [provider, setProvider] = useState("openai-image-generation");
   const [model, setModel] = useState("gpt-image-1-mini");
+  const [videoSeconds, setVideoSeconds] = useState(4);
   const [quality, setQuality] = useState("low");
   const [style, setStyle] = useState("cinematic noir");
   const [ratio, setRatio] = useState("16:9");
@@ -43,12 +45,16 @@ export function CreatePanel() {
     try {
       const puter = window.puter ?? (await loadPuter());
       if (!puter.ai?.txt2img) throw new Error("Puter image generation is not available yet.");
-      const image = await puter.ai.txt2img(
-        `${trimmed}, ${style}, ${ratio} composition`,
-        { provider, model, quality, ratio: RATIO[ratio] ?? RATIO["16:9"], test_mode: false },
-      );
-      if (!image?.src) throw new Error("Puter returned no image.");
-      addCreate({ id: uid("img"), prompt: `${trimmed}, ${style}, ${ratio}`, url: image.src, createdAt: Date.now() });
+      if (kind === "video") {
+        if (!puter.ai?.txt2vid) throw new Error("Puter video generation is not available yet.");
+        const video = await puter.ai.txt2vid(trimmed, { model: model === "gpt-image-1-mini" ? "sora-2" : model, seconds: videoSeconds, size: ratio === "9:16" ? "720x1280" : "1280x720", test_mode: false });
+        if (!video?.src) throw new Error("Puter returned no video.");
+        addCreate({ id: uid("vid"), prompt: trimmed, url: video.src, kind: "video", createdAt: Date.now() });
+      } else {
+        const image = await puter.ai.txt2img(`${trimmed}, ${style}, ${ratio} composition`, { provider, model, quality, ratio: RATIO[ratio] ?? RATIO["16:9"], test_mode: false });
+        if (!image?.src) throw new Error("Puter returned no image.");
+        addCreate({ id: uid("img"), prompt: `${trimmed}, ${style}, ${ratio}`, url: image.src, kind: "image", createdAt: Date.now() });
+      }
       setPrompt("");
     } catch (err) {
       setError(puterErrorMessage(err));
@@ -69,6 +75,7 @@ export function CreatePanel() {
           {presets.map((preset) => <button key={preset} type="button" onClick={() => setPrompt(preset)} className="rounded-full border border-border px-3 py-1.5 text-[11px] text-muted-foreground hover:bg-secondary">{preset}</button>)}
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
+          <select value={kind} onChange={(e) => setKind(e.target.value as "image" | "video")} className="h-10 rounded-[var(--radius-md)] border border-border bg-card px-3 text-xs outline-none"><option value="image">ภาพ</option><option value="video">วิดีโอ</option></select>
           <select value={provider} onChange={(e) => selectProvider(e.target.value)} className="h-10 rounded-[var(--radius-md)] border border-border bg-card px-3 text-xs outline-none">
             <option value="openai-image-generation">OpenAI Image</option>
             <option value="gemini">Gemini Image</option>
@@ -105,7 +112,7 @@ export function CreatePanel() {
         {creates.length === 0 ? <p className="py-10 text-center text-sm text-subtle">{t.createEmpty}</p> : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {creates.map((item) => <figure key={item.id} className="overflow-hidden rounded-[var(--radius-xl)] border border-border bg-card">
-              <img src={item.url} alt={item.prompt} className="aspect-[16/10] w-full object-cover" crossOrigin="anonymous" />
+              {item.kind === "video" ? <video src={item.url} controls playsInline className="aspect-[16/10] w-full object-cover" /> : <img src={item.url} alt={item.prompt} className="aspect-[16/10] w-full object-cover" crossOrigin="anonymous" />}
               <figcaption className="px-3 py-2 text-xs leading-relaxed text-muted-foreground">{item.prompt}</figcaption>
             </figure>)}
           </div>
