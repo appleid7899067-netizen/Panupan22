@@ -65,15 +65,32 @@ function paintFlow(
   );
 }
 
-function quickNextActions(message: string, skillId?: string): string[] {
-  const text = message.toLowerCase();
-  if (skillId === "image-create" || /สร้างภาพ|image/.test(text)) return ["ทำเป็นวิดีโอ", "แก้ภาพให้สวยขึ้น", "ทำอีก 3 แบบ", "เปิดใน Create Hub"];
-  if (skillId === "video-create" || /สร้างวิดีโอ|video/.test(text)) return ["สร้างอีกเวอร์ชัน", "เปลี่ยนเป็นแนวตั้ง", "เพิ่มเสียง", "เปิดใน Create Hub"];
-  if (skillId === "image-ocr" || /ocr|อ่านข้อความในภาพ/.test(text)) return ["สรุปข้อความ", "แปลเป็นอังกฤษ", "จัดเป็นเอกสาร", "อ่านออกเสียง"];
-  if (skillId === "speech-to-text" || /ถอดเสียง|transcri/.test(text)) return ["สรุปเสียง", "แปลภาษา", "จัดเป็นหัวข้อ", "สร้างเอกสาร"];
-  if (skillId === "text-to-speech" || /อ่านออกเสียง|เสียง/.test(text)) return ["เปลี่ยนเสียง", "พูดช้าลง", "สร้างอีกเวอร์ชัน", "บันทึกไว้ใน Create Hub"];
-  if (skillId === "voice-changer") return ["ลองเสียงอื่น", "อ่านข้อความใหม่", "สร้างไฟล์เสียงใหม่", "เปิดใน Create Hub"];
-  return ["ทำต่อให้เลย", "อธิบายขั้นตอน", "สร้างเวอร์ชันอื่น", "เปิดเครื่องมือที่เกี่ยวข้อง"];
+function contextualActions(text: string, skillId?: string, hasFiles = false): string[] {
+  const value = text.toLowerCase();
+  const actions: string[] = [];
+  const add = (...items: string[]) => {
+    for (const item of items) if (!actions.includes(item)) actions.push(item);
+  };
+
+  if (skillId === "image-create" || /สร้างภาพ|วาดภาพ|image/.test(value)) {
+    add("แก้ภาพให้สวยขึ้น", "ทำอีก 3 แบบ", "เปลี่ยนสไตล์", "ทำเป็นวิดีโอ");
+  } else if (skillId === "video-create" || /สร้างวิดีโอ|ทำวิดีโอ|video/.test(value)) {
+    add("สร้างอีกเวอร์ชัน", "เปลี่ยนเป็นแนวตั้ง", "เพิ่มเสียง", "ตัดให้สั้นลง");
+  } else if (skillId === "code-review" || /โค้ด|code|error|bug|เออเรอร์/.test(value)) {
+    add("ตรวจโค้ดให้เลย", "รันทดสอบ", "แก้ Error ให้เลย", "อธิบายจุดที่พัง");
+  } else if (skillId === "web-search" || /ค้นหา|ล่าสุด|ข่าว|ราคา|ข้อมูล|เว็บ|research/.test(value)) {
+    add("ค้นเพิ่ม", "สรุปให้สั้น", "เปรียบเทียบข้อมูล", "เปิดแหล่งข้อมูล");
+  } else if (skillId === "link-follower" || /https?:\/\//.test(value)) {
+    add("ตรวจลิงก์", "สรุปหน้านี้", "ตรวจสถานะเว็บ", "วิเคราะห์ต่อ");
+  } else if (skillId === "doc-reader" || hasFiles || /เอกสาร|ไฟล์|document/.test(value)) {
+    add("สรุปไฟล์", "ค้นในไฟล์", "แปลไฟล์", "จัดเป็นหัวข้อ");
+  } else if (skillId === "translate" || /แปล|translate/.test(value)) {
+    add("แปลให้ละเอียดขึ้น", "สรุปข้อความ", "ปรับภาษาให้ธรรมชาติ", "แปลกลับเพื่อตรวจ");
+  } else {
+    add("ทำต่อให้เลย", "ตรวจคำตอบ", "ขยายรายละเอียด");
+  }
+
+  return actions.slice(0, 4);
 }
 
 function routeWorkspaceCommand(command: string, setWorkspaceMode: (mode: "command" | "create" | "sandbox" | "live" | "terminal" | "super" | "manus") => void) {
@@ -739,9 +756,9 @@ export function ChatPanel() {
                       ) : null}
                       {msg.role === "assistant" && !msg.pending && msg.content && msg.id === convo.messages[convo.messages.length - 1]?.id ? (
                         <div className="mt-3 border-t border-border/70 pt-3">
-                          <p className="mb-2 text-[11px] text-subtle">{language === "th" ? "อยากให้ทำอะไรต่อ?" : "What should I do next?"}</p>
+                          <p className="mb-2 text-[11px] text-subtle">{language === "th" ? "ตามบริบทนี้ บอสทำต่อได้" : "Contextual actions"}</p>
                           <div className="flex flex-wrap gap-2">
-                            {quickNextActions(msg.content, msg.skillCall?.skillId).map((action) => (
+                            {contextualActions(draft || msg.content, msg.skillCall?.skillId, files.length > 0).map((action) => (
                               <button
                                 key={action}
                                 type="button"
