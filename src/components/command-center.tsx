@@ -59,11 +59,15 @@ export function CommandCenter() {
   const signedIn = status === "signed_in";
   const [agentsOpen, setAgentsOpen] = useState(false);
   const [forgeOpen, setForgeOpen] = useState(false);
-  const [now, setNow] = useState(() => new Date());
+  // null until client mount — avoids SSR/client text mismatch (React #418)
+  const [now, setNow] = useState<Date | null>(null);
   const [autoOn, setAutoOn] = useState(false);
   const [lastPulse, setLastPulse] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    setNow(new Date());
     const id = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(id);
   }, []);
@@ -102,20 +106,31 @@ export function CommandCenter() {
 
   const modeLabel = (id: WorkspaceMode) =>
     id === "apps"
-      ? (language === "th" ? "แอพ" : "Apps")
+      ? language === "th"
+        ? "แอพ"
+        : "Apps"
       : id === "create"
-      ? t.modeCreate
-      : id === "sandbox"
-        ? t.modeSandbox
-        : id === "live"
-          ? t.modeLive
-          : id === "terminal"
-            ? t.modeTerminal
-            : id === "super"
-              ? t.modeSuper
-              : id === "manus"
-                ? t.modeManus
-                : t.modeCommand;
+        ? t.modeCreate
+        : id === "sandbox"
+          ? t.modeSandbox
+          : id === "live"
+            ? t.modeLive
+            : id === "terminal"
+              ? t.modeTerminal
+              : id === "super"
+                ? t.modeSuper
+                : id === "manus"
+                  ? t.modeManus
+                  : t.modeCommand;
+
+  const clockText =
+    mounted && now
+      ? now.toLocaleTimeString(language === "th" ? "th-TH" : "en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
+      : "\u00a0\u00a0:\u00a0\u00a0:\u00a0\u00a0";
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
@@ -147,14 +162,10 @@ export function CommandCenter() {
             />
             AUTO
           </button>
-          <span className="hidden text-muted-foreground sm:inline">
-            {now.toLocaleTimeString(language === "th" ? "th-TH" : "en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })}
+          <span className="hidden text-muted-foreground sm:inline" suppressHydrationWarning>
+            {clockText}
           </span>
-          {lastPulse && autoOn ? (
+          {mounted && lastPulse && autoOn ? (
             <span className="hidden truncate text-muted-foreground md:inline">
               · {lastPulse}
             </span>
@@ -166,7 +177,7 @@ export function CommandCenter() {
         <div className="flex items-center gap-2 text-muted-foreground">
           <Radio className="size-3 text-lime-300" />
           <span className="hidden sm:inline">
-            {signedIn ? user?.username ?? "Puter" : t.guest}
+            {signedIn ? (user?.username ?? "Puter") : t.guest}
           </span>
         </div>
       </div>
@@ -350,9 +361,9 @@ export function CommandCenter() {
         </aside>
       </div>
 
-      <p className="hidden border-t border-border px-4 py-1.5 text-center text-[10px] tracking-wide text-subtle sm:block">
+      <p className="hidden border-t border-border px-4 py-1.5 text-center text-[10px] tracking-wide text-subtle sm:block" suppressHydrationWarning>
         {APP_SHORT_NAME} · {APP_DEVELOPER} · Real-time
-        {autoOn ? " · AUTO" : ""}
+        {mounted && autoOn ? " · AUTO" : ""}
       </p>
 
       <Sheet open={agentsOpen} onOpenChange={setAgentsOpen}>
