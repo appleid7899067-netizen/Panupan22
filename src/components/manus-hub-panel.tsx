@@ -155,12 +155,12 @@ function LiveTasks({ th }: { th: boolean }) {
 
       {configured && tasks.length === 0 ? <p className="rounded-xl border border-dashed border-border p-5 text-center text-xs text-subtle">{th ? "ยังไม่มีงานจาก Manus API" : "No Manus API tasks yet."}</p> : null}
 
-      {tasks.map((task) => <button key={task.id} type="button" onClick={() => setSelectedTaskId(task.id)} className={cn("flex w-full items-center gap-3 rounded-xl border bg-background p-3 text-left transition-colors", selectedTaskId === task.id ? "border-cyan-300/40 bg-cyan-300/5" : "border-border hover:border-cyan-300/20")}>
+      {tasks.map((task) => <div key={task.id} role="button" tabIndex={0} onClick={() => setSelectedTaskId(task.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedTaskId(task.id); } }} className={cn("flex w-full cursor-pointer items-center gap-3 rounded-xl border bg-background p-3 text-left transition-colors", selectedTaskId === task.id ? "border-cyan-300/40 bg-cyan-300/5" : "border-border hover:border-cyan-300/20")}>
         <CircleDashed className={cn("size-4 shrink-0", task.status === "running" ? "animate-spin text-cyan-300" : task.status === "stopped" ? "text-lime-300" : "text-amber-300")} />
         <div className="min-w-0 flex-1"><p className="truncate text-xs">{task.title || task.id}</p><p className="text-[10px] text-subtle">{task.status || "unknown"}</p></div>
         {task.task_url ? <a href={task.task_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-cyan-300" aria-label="Open Manus task"><ExternalLink className="size-3.5" /></a> : null}
         {task.status === "running" ? <span onClick={(e) => { e.stopPropagation(); void stopTask(task.id); }} className={cn("rounded-md px-2 py-1 text-[10px] text-red-300", busy ? "pointer-events-none opacity-50" : "hover:bg-red-300/10")}>Stop</span> : null}
-      </button>)}
+      </div>)}
 
       {selectedTaskId ? <div className="rounded-2xl border border-border bg-background">
         <div className="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
