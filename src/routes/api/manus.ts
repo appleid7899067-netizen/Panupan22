@@ -61,6 +61,12 @@ export const Route = createFileRoute("/api/manus")({
           const limit = Math.min(20, Math.max(1, Number(url.searchParams.get("limit") || 10) || 10));
           return manusFetch(`/task.list?limit=${limit}&order=desc`);
         }
+        if (action === "messages") {
+          const taskId = url.searchParams.get("taskId")?.trim() ?? "";
+          if (!taskId || taskId.length > 200) return json({ ok: false, error: "Valid taskId is required." }, 400);
+          const limit = Math.min(50, Math.max(1, Number(url.searchParams.get("limit") || 20) || 20));
+          return manusFetch(`/task.listMessages?task_id=${encodeURIComponent(taskId)}&order=asc&limit=${limit}`);
+        }
         if (action === "projects") return manusFetch("/project.list");
         return json({ ok: false, error: "Unsupported action" }, 400);
       },
