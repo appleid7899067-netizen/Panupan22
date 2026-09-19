@@ -48,6 +48,7 @@ export type PuterImageOptions = {
 type PuterAiApi = {
   chat: (prompt: string | PuterChatMessage[], options?: PuterChatOptions) => Promise<unknown>;
   txt2img?: (prompt: string, options?: PuterImageOptions | boolean) => Promise<HTMLImageElement>;
+  txt2vid?: (prompt: string, options?: { model?: string; seconds?: number; size?: string; test_mode?: boolean }) => Promise<HTMLVideoElement>;
   listModels?: (provider?: string) => Promise<unknown>;
 };
 
