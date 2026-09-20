@@ -6,6 +6,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { fetchLiveData } from "@/lib/live-data";
 import { SKILLS } from "@/lib/bossnugrok/skills";
 import type { SkillCall, SkillId } from "@/lib/bossnugrok/skills/skill-types";
+import { executeBossAction, BOSS_ACTIONS, type BossActionName } from "@/lib/bossnugrok/action-bridge";
 
 const CHAT_MODEL = "grok-4.5";
 const MAX_TOKENS = 1400;
@@ -28,7 +29,21 @@ export type KernelResult =
   | { ok: true; text: string; model: string; skillCalls: SkillCall[] }
   | { ok: false; error: string; skillCalls: SkillCall[] };
 
+const BOSS_ACTION_TOOL_DEFS = BOSS_ACTIONS.map((action) => ({
+  type: "function" as const,
+  function: {
+    name: action.name,
+    description: action.description,
+    parameters: {
+      type: "object",
+      properties: { repo: { type: "string" }, path: { type: "string" }, ref: { type: "string" }, content: { type: "string" }, message: { type: "string" }, branch: { type: "string" }, sha: { type: "string" }, url: { type: "string" }, text: { type: "string" } },
+      required: action.name === "repo_read_file" ? ["path"] : action.name === "repo_write_file" ? ["path", "content"] : action.name === "web_check" ? ["url"] : action.name === "memory_learn" ? ["text"] : [],
+    },
+  },
+}));
+
 const TOOLS = [
+  ...BOSS_ACTION_TOOL_DEFS,
   {
     type: "function" as const,
     function: {
@@ -105,7 +120,7 @@ function kernelSystem(lang: "th" | "en", extra?: string) {
     lang === "th"
       ? `คุณคือผู้บัญชาการ BossnuGrok (ผู้พัฒนา: ภาณุพันธ์)
 อยู่ห้องแชทนี้ตลอด ห้ามบอกให้ผู้ใช้ไปเปิดโหมดอื่น เว้นแต่เขาพูดชัดว่า "เปิด sandbox" / "switch to terminal"
-เรียกเครื่องมือเองเมื่อต้องการข้อมูลสดหรือรันโค้ด
+เรียกเครื่องมือเองเมื่อต้องการข้อมูลสดหรือรันโค้ด\nเลือก Boss actions เองเมื่อจำเป็นต้องตรวจ/แก้ repository, ตรวจเว็บ, ตรวจ CI หรือบันทึกบทเรียน
 ห้ามใช้ emoji ห้ามแต่ง token budget
 ตอบภาษาไทยถ้าผู้ใช้พิมพ์ไทย`
       : `You are the BossnuGrok commander (developer: Phanuphan).
@@ -142,7 +157,7 @@ async function executeTool(
   } catch {
     args = { raw: rawArgs };
   }
-  const skillId = NAME_TO_SKILL[name] ?? "web-search";
+  const skillId = NAME_TO_SKILL[name] ?? "web-search";\n\n  if (BOSS_ACTIONS.some((action) => action.name === name)) {\n    const action = await executeBossAction(name as BossActionName, args);\n    return { skillId: "daily-fixer", args, output: action.ok ? action.summary + "\\n" + JSON.stringify(action.data ?? {}, null, 2).slice(0, 7000) : "❌ " + (action.error || action.summary) };\n  }
 
   if (name === "code_runner") {
     const code = String(args.code ?? "").trim();
