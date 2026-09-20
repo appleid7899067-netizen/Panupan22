@@ -1,16 +1,27 @@
+import { useEffect, useState, type ReactNode } from "react";
 import { Cloud, Layers, Shield } from "lucide-react";
 import { AppMark, PuterMark } from "@/components/logo";
+import { OpenRouterKeyBar } from "@/components/openrouter-key-bar";
 import { Button } from "@/components/ui/button";
 import { COPY } from "@/lib/copy";
 import { APP_EDITION, APP_SHORT_NAME } from "@/lib/brand";
+import { getOpenRouterKey, OPENROUTER_KEY_EVENT } from "@/lib/openrouter-keys";
 import { usePuterAuth } from "@/lib/puter-auth";
 import { useBossStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-import type { ReactNode } from "react";
 
 export function PuterGate({ children }: { children: ReactNode }) {
   const { status } = usePuterAuth();
-  if (status === "signed_in") return <>{children}</>;
+  const [openRouter, setOpenRouter] = useState(() => Boolean(getOpenRouterKey()));
+
+  useEffect(() => {
+    const sync = () => setOpenRouter(Boolean(getOpenRouterKey()));
+    window.addEventListener(OPENROUTER_KEY_EVENT, sync);
+    return () => window.removeEventListener(OPENROUTER_KEY_EVENT, sync);
+  }, []);
+
+  // Either path unlocks the app: Puter session OR OpenRouter key
+  if (status === "signed_in" || openRouter) return <>{children}</>;
   return <PuterLoginScreen />;
 }
 
@@ -58,67 +69,50 @@ export function PuterLoginScreen() {
         <div className="boss-stagger rounded-[32px] border border-border bg-card px-6 py-8 sm:px-8">
           <div className="flex flex-col items-center text-center">
             <AppMark className="size-16 text-brand" />
-            <h1 className="mt-5 font-display text-4xl tracking-[-0.04em] sm:text-5xl">{APP_SHORT_NAME}</h1>
-            <p className="mt-2 text-sm uppercase tracking-[0.22em] text-subtle">{APP_EDITION}</p>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">{t.loginLead}</p>
+            <h1 className="mt-5 font-display text-2xl font-semibold tracking-tight text-foreground">
+              {APP_SHORT_NAME}
+            </h1>
+            <p className="mt-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">{APP_EDITION}</p>
+            <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
+              {language === "th"
+                ? "เลือกทางเข้า: ใส่ OpenRouter key หรือ Sign in with Puter"
+                : "Enter via OpenRouter key or Sign in with Puter"}
+            </p>
           </div>
 
-          <ul className="mt-7 space-y-2.5">
-            {benefits.map((item) => (
-              <li key={item.title} className="flex items-center gap-3 text-left text-sm text-muted-foreground">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-[12px] border border-border bg-secondary">
-                  <item.icon className="size-4 text-foreground" />
-                </span>
-                <span>
-                  <span className="block text-foreground">{item.title}</span>
-                  <span className="block text-xs text-subtle">{item.sub}</span>
-                </span>
+          <div className="mt-6 space-y-3">
+            <OpenRouterKeyBar />
+            <div className="relative py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
+              <span className="bg-card px-2">{language === "th" ? "หรือ" : "or"}</span>
+              <div className="absolute inset-x-0 top-1/2 -z-10 h-px bg-border" />
+            </div>
+            <Button
+              className="h-11 w-full rounded-2xl"
+              onClick={() => void signIn()}
+              disabled={pending || loading}
+            >
+              <PuterMark className="size-4" />
+              {pending || loading ? t.connecting : t.continuePuter}
+            </Button>
+            {unavailable ? (
+              <Button variant="secondary" className="h-10 w-full rounded-2xl" onClick={() => void retry()}>
+                {t.retry}
+              </Button>
+            ) : null}
+            {error ? <p className="text-center text-xs text-destructive">{error}</p> : null}
+          </div>
+
+          <ul className="mt-8 space-y-3">
+            {benefits.map((b) => (
+              <li key={b.title} className="flex gap-3 rounded-2xl border border-border/60 bg-background/40 px-3 py-2.5">
+                <b.icon className="mt-0.5 size-4 shrink-0 text-cyan-300" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">{b.title}</p>
+                  <p className="text-xs text-muted-foreground">{b.sub}</p>
+                </div>
               </li>
             ))}
           </ul>
-
-          {loading ? (
-            <div className="mt-8 space-y-3">
-              <div className="flex h-12 items-center justify-center rounded-full bg-secondary text-sm text-muted-foreground">
-                {t.connecting}
-              </div>
-            </div>
-          ) : (
-            <div className="mt-8 space-y-3">
-              <Button
-                size="lg"
-                className="h-12 w-full rounded-full text-sm"
-                onClick={() => void signIn()}
-                disabled={unavailable || pending}
-              >
-                <PuterMark className="size-4" />
-                {pending ? t.waitingPuter : t.continuePuter}
-              </Button>
-              {unavailable ? (
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-12 w-full rounded-full text-sm"
-                  onClick={() => void retry()}
-                >
-                  {t.retryPuter}
-                </Button>
-              ) : null}
-            </div>
-          )}
-
-          {error ? (
-            <p
-              className={cn(
-                "mt-5 text-center text-xs leading-relaxed",
-                unavailable ? "text-destructive" : "text-muted-foreground",
-              )}
-            >
-              {error}
-            </p>
-          ) : (
-            <p className="mt-5 text-center text-xs leading-relaxed text-subtle">{t.popupHint}</p>
-          )}
         </div>
       </div>
     </div>
