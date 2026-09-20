@@ -2,6 +2,7 @@
  * Boss Action Bridge
  *
  * Central action layer for the chat commander.
+ * CI verifies every change before release.
  * The model chooses actions; this module performs them server-side.
  * Secrets stay in environment variables and are never returned to the model.
  */
