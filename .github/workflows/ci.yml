@@ -1,4 +1,5 @@
 name: Panupan22 CI
+# Production gate: typecheck + lint + regression + build + real HTTP boot
 
 on:
   push:
