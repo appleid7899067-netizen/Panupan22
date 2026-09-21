@@ -407,7 +407,7 @@ export function normalizeHeadContext(ctx = {}) {
   // wins over the og.grok.me placeholder. Vercel has no public/ to read, so
   // a correct bake is unchanged.
   const site = applyCustomCardFromFs(
-    ctx.site !== undefined ? ctx.site : snapshotOgIdentity(cwd).site,
+    ctx.site !== undefined ? ctx.site : {},
     cwd,
   );
   const appName = resolveOgTitle(site, ctx.appName ?? DEFAULT_APP_NAME, ctx.host ?? "");
