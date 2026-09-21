@@ -25,6 +25,8 @@ export type KernelMessage = {
   tool_calls?: GrokToolCall[];
 };
 
+type ToolArgs = Record<string, string | number | boolean | null>;
+
 export type KernelResult =
   | { ok: true; text: string; model: string; skillCalls: SkillCall[] }
   | { ok: false; error: string; skillCalls: SkillCall[] };
@@ -150,10 +152,10 @@ async function runCode(code: string): Promise<string> {
 async function executeTool(
   name: string,
   rawArgs: string,
-): Promise<{ skillId: SkillId; output: string; args: Record<string, unknown> }> {
-  let args: Record<string, unknown> = {};
+): Promise<{ skillId: SkillId; output: string; args: ToolArgs }> {
+  let args: ToolArgs = {};
   try {
-    args = rawArgs ? (JSON.parse(rawArgs) as Record<string, unknown>) : {};
+    args = rawArgs ? (JSON.parse(rawArgs) as ToolArgs) : {};
   } catch {
     args = { raw: rawArgs };
   }
