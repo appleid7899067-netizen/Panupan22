@@ -1,4 +1,4 @@
-import type { SkillCall, SkillDefinition, SkillId, SkillResult } from "./skill-types";
+import type { SkillCall, SkillDefinition, SkillId, SkillResult, SkillJsonValue } from "./skill-types";
 import { recordError, recordSuccess, getDailyInsights, getSuccessRate, loadMemory } from "../memory/storage";
 import { fetchLiveData } from "@/lib/live-data";
 import { chatWithPuter } from "@/lib/puter-ai";
@@ -618,11 +618,15 @@ export async function executeSkill(
     result = { ok: false, error: message, duration: 0 };
   }
 
+  const serializableResult = result.data === undefined
+    ? undefined
+    : (JSON.parse(JSON.stringify(result.data)) as SkillJsonValue);
+
   return {
     ...call,
     status: result.ok ? "done" : "error",
     streamOutput,
-    result: result.data,
+    result: serializableResult,
     error: result.error,
     duration: result.duration,
   };
