@@ -32,8 +32,8 @@ jobs:
       - name: Clean generated state
         run: node scripts/ci-clean-room.mjs
 
-      - name: Install exact lockfile
-        run: npm ci --no-audit --no-fund
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
 
       - name: Generate development route tree
         run: npm run build:dev
