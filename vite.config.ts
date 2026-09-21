@@ -178,6 +178,8 @@ export default defineConfig(({ command, isPreview }) => ({
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
             // false, so removing this silently unwires /?install=1 on deploys.
             serverDir: "./server",
+            // Railway runs the Nitro node-server directly. Explicitly serve generated CSS/JS assets.
+            serveStatic: "node",
             // Keep PGlite and tslib as runtime dependencies so their native/WASM
             // sibling assets and ESM helpers resolve from node_modules on Vercel.
             externals: {
