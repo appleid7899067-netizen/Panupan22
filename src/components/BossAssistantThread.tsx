@@ -55,7 +55,7 @@ function AssistantMessage() {
             part.type === "text" ? (
               <MessagePartPrimitive.Text className="whitespace-pre-wrap leading-6" />
             ) : (
-              part.toolUI ?? null
+              null
             )
           }
         </MessagePrimitive.Parts>
