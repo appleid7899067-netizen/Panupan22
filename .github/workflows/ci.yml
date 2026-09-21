@@ -28,6 +28,6 @@ jobs:
       # Full regression suite, including auth/PWA/migration contracts.
       - run: npm test
       # Production build must include every runtime asset required by the server.
-      - run: npm run build
+      - run: RAILWAY_ENVIRONMENT_NAME=ci npm run build
       # Boot the exact production artifact and require a real HTTP response.
       - run: npm run smoke:production
