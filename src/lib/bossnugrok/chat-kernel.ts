@@ -309,4 +309,18 @@ export const runChatKernel = createServerFn({ method: "POST" })
     system?: string;
     lang?: "th" | "en";
   }) => input)
-  .handler(async ({ data }): Promise<KernelResult> => runChatTurn(data));
+  .handler(async ({ data }): Promise<KernelResult> => {
+    const result = await runChatTurn(data);
+    const skillCalls = result.skillCalls.map((call) => ({
+      ...call,
+      args: Object.fromEntries(
+        Object.entries(call.args).map(([key, value]) => [
+          key,
+          typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null
+            ? value
+            : JSON.stringify(value),
+        ]),
+      ) as Record<string, unknown>,
+    }));
+    return { ...result, skillCalls };
+  });
