@@ -313,13 +313,15 @@ export function CommandCenter() {
       </div>
 
       <div className="flex min-h-0 flex-1">
-        <CommanderRail
-          activeMode={workspaceMode}
-          onMode={setWorkspaceMode}
-          onAgents={() => setAgentsOpen(true)}
-          onForge={() => setForgeOpen(true)}
-          language={language}
-        />
+        <div className="hidden">
+          <CommanderRail
+            activeMode={workspaceMode}
+            onMode={setWorkspaceMode}
+            onAgents={() => setAgentsOpen(true)}
+            onForge={() => setForgeOpen(true)}
+            language={language}
+          />
+        </div>
         <div className="grid min-w-0 min-h-0 flex-1 grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_300px]">
         <aside className="hidden">
           <div className="flex h-full flex-col">
