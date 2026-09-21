@@ -41,44 +41,53 @@ function Login() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#090a0c] text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_18%,rgba(255,255,255,0.10),transparent_30%),radial-gradient(ellipse_at_50%_75%,rgba(120,120,140,0.06),transparent_42%),linear-gradient(to_bottom,#090a0c_0%,#0d0e11_58%,#070809_100%)]" />
-      <div className="pointer-events-none absolute left-1/2 top-[43%] h-32 w-[620px] max-w-[150%] -translate-x-1/2 rounded-[50%] border border-white/[0.035] bg-[linear-gradient(to_bottom,transparent,rgba(255,255,255,0.025))] blur-[1px]" />
+    <main className="relative min-h-screen overflow-hidden bg-black text-white selection:bg-white selection:text-black">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(255,255,255,0.08),transparent_26%),radial-gradient(circle_at_50%_78%,rgba(255,255,255,0.035),transparent_36%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/[0.08]" />
 
-      <div className="relative flex min-h-screen flex-col px-5 pb-10 pt-5 sm:px-8">
+      <div className="relative flex min-h-screen flex-col px-5 pb-7 pt-5 sm:px-8">
         <header className="flex items-center justify-between">
           <button
             type="button"
             onClick={() => window.history.back()}
             aria-label="ย้อนกลับ"
-            className="grid size-11 place-items-center rounded-full border border-white/[0.06] bg-white/[0.025] text-white/80 transition hover:bg-white/[0.07] active:scale-95"
+            className="grid size-10 place-items-center rounded-full text-white/65 transition hover:bg-white/[0.07] hover:text-white active:scale-95"
           >
             <span className="text-3xl font-light leading-none">‹</span>
           </button>
 
-          <div className="grid size-11 place-items-center rounded-full border border-white/[0.06] bg-white/[0.025] text-white/60">
-            <span className="text-lg">◷</span>
+          <div className="text-[11px] font-semibold tracking-[0.22em] text-white/30">
+            BOSSNUGROK
           </div>
         </header>
 
         <div className="flex flex-1 items-center justify-center">
-          <section className="w-full max-w-[430px] text-center">
-            <div className="mb-7 select-none text-[64px] font-semibold leading-none tracking-[-0.07em] text-white drop-shadow-[0_0_28px_rgba(255,255,255,0.08)] sm:text-[82px]">
-              BossnuGrok
+          <section className="w-full max-w-[440px] text-center">
+            <div className="mb-9">
+              <div className="mx-auto mb-7 grid size-[74px] place-items-center rounded-[24px] border border-white/10 bg-white/[0.045] shadow-[0_0_70px_rgba(255,255,255,0.055)]">
+                <span className="text-[42px] font-black tracking-[-0.09em]">B</span>
+              </div>
+
+              <h1 className="text-[46px] font-bold tracking-[-0.065em] sm:text-[58px]">
+                BossnuGrok
+              </h1>
+              <p className="mt-3 text-[15px] font-medium tracking-[-0.01em] text-white/45">
+                AI ที่สร้างมาเพื่อคุณ
+              </p>
             </div>
 
-            <div className="mx-auto mb-7 h-px w-16 bg-white/15" />
+            <div className="mx-auto mb-7 h-px w-10 bg-white/15" />
 
-            <h1 className="text-[24px] font-medium tracking-[-0.02em] sm:text-[28px]">
-              ขอบคุณที่ลองใช้ BossnuGrok
-            </h1>
+            <h2 className="text-[23px] font-semibold tracking-[-0.025em] sm:text-[26px]">
+              เข้าสู่ BossnuGrok
+            </h2>
 
-            <p className="mx-auto mt-4 max-w-[360px] text-[16px] leading-7 text-white/60">
-              ดำเนินการต่อเพื่อเข้าสู่ระบบและใช้งานตามสิทธิ์ของบัญชี
+            <p className="mx-auto mt-3 max-w-[350px] text-[14px] leading-6 text-white/45">
+              ลงชื่อเข้าใช้เพื่อเข้าถึงห้องบัญชาการและระบบ AI ของคุณ
             </p>
 
             {authEnabled ? (
-              <div className="mt-9 space-y-3">
+              <div className="mt-8 space-y-3">
                 {GROK_PROVIDERS.map((provider) => (
                   <button
                     key={provider.providerId}
@@ -86,10 +95,10 @@ function Login() {
                     onClick={() =>
                       void signIn(provider.providerId, { callbackURL: "/" })
                     }
-                    className="group flex h-14 w-full items-center justify-center gap-3 rounded-full border border-white/[0.09] bg-[#202125]/95 px-5 text-[16px] font-medium shadow-[0_8px_30px_rgba(0,0,0,0.22)] transition hover:border-white/15 hover:bg-[#292a2e] active:scale-[0.985]"
+                    className="group flex h-[54px] w-full items-center justify-center gap-3 rounded-full border border-white/[0.12] bg-white px-5 text-[15px] font-semibold text-black shadow-[0_10px_35px_rgba(0,0,0,0.3)] transition hover:bg-white/90 active:scale-[0.985]"
                   >
-                    <span className="grid size-7 place-items-center rounded-full bg-white text-sm font-bold text-black">
-                      {provider.label === "Google" ? "G" : "X"}
+                    <span className="grid size-7 place-items-center rounded-full bg-black text-[13px] font-bold text-white">
+                      {provider.label === "Google" ? "G" : "𝕏"}
                     </span>
                     ดำเนินการต่อด้วย {provider.label}
                   </button>
@@ -103,18 +112,18 @@ function Login() {
                         setShowEmail((value) => !value);
                         setError("");
                       }}
-                      className="flex h-14 w-full items-center justify-center gap-3 rounded-full border border-white/[0.09] bg-[#202125]/95 px-5 text-[16px] font-medium shadow-[0_8px_30px_rgba(0,0,0,0.22)] transition hover:border-white/15 hover:bg-[#292a2e] active:scale-[0.985]"
+                      className="flex h-[54px] w-full items-center justify-center gap-3 rounded-full border border-white/[0.12] bg-[#181818] px-5 text-[15px] font-semibold text-white transition hover:bg-[#222] active:scale-[0.985]"
                     >
-                      <span className="text-lg">✉</span>
+                      <span className="text-base">✉</span>
                       ดำเนินการต่อด้วยอีเมล
                     </button>
 
                     {showEmail && (
                       <form
                         onSubmit={submitEmail}
-                        className="mt-4 space-y-3 rounded-3xl border border-white/10 bg-white/[0.045] p-4 text-left backdrop-blur-xl"
+                        className="mt-4 space-y-3 rounded-[28px] border border-white/10 bg-[#111] p-4 text-left shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
                       >
-                        <label className="block text-sm text-white/70">
+                        <label className="block text-sm text-white/65">
                           อีเมล
                           <input
                             type="email"
@@ -122,12 +131,12 @@ function Login() {
                             value={email}
                             onChange={(event) => setEmail(event.target.value)}
                             placeholder="you@example.com"
-                            className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-[#151518] px-4 text-white outline-none placeholder:text-white/30 focus:border-white/30"
+                            className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-black px-4 text-white outline-none placeholder:text-white/25 focus:border-white/35"
                             required
                           />
                         </label>
 
-                        <label className="block text-sm text-white/70">
+                        <label className="block text-sm text-white/65">
                           รหัสผ่าน
                           <input
                             type="password"
@@ -135,7 +144,7 @@ function Login() {
                             value={password}
                             onChange={(event) => setPassword(event.target.value)}
                             placeholder="รหัสผ่าน"
-                            className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-[#151518] px-4 text-white outline-none placeholder:text-white/30 focus:border-white/30"
+                            className="mt-2 h-12 w-full rounded-2xl border border-white/10 bg-black px-4 text-white outline-none placeholder:text-white/25 focus:border-white/35"
                             required
                           />
                         </label>
@@ -159,24 +168,24 @@ function Login() {
                 )}
               </div>
             ) : (
-              <div className="mx-auto mt-9 max-w-[390px] rounded-3xl border border-white/[0.08] bg-white/[0.035] px-5 py-5 shadow-[0_12px_40px_rgba(0,0,0,0.24)] backdrop-blur-xl">
-                <div className="mx-auto mb-3 grid size-9 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-sm text-white/60">
+              <div className="mx-auto mt-8 max-w-[390px] rounded-3xl border border-white/[0.08] bg-white/[0.035] px-5 py-5">
+                <div className="mx-auto mb-3 grid size-9 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-white/45">
                   •
                 </div>
-                <p className="text-sm text-white/55">
+                <p className="text-sm text-white/45">
                   Sign-in ถูกปิดอยู่ใน environment นี้
                 </p>
               </div>
             )}
 
-            <p className="mx-auto mt-8 max-w-[370px] text-xs leading-6 text-white/30">
-              การดำเนินการต่อถือว่าคุณยอมรับข้อกำหนดและนโยบายความเป็นส่วนตัวของระบบ
+            <p className="mx-auto mt-7 max-w-[370px] text-[11px] leading-5 text-white/25">
+              การดำเนินการต่อถือว่าคุณยอมรับข้อกำหนดและนโยบายความเป็นส่วนตัวของ BossnuGrok
             </p>
           </section>
         </div>
 
-        <footer className="pb-1 text-center text-[11px] tracking-[0.18em] text-white/20">
-          BOSSnUGROK
+        <footer className="text-center text-[10px] font-semibold tracking-[0.28em] text-white/20">
+          BOSSNUGROK · AI COMMAND CENTER
         </footer>
       </div>
     </main>
