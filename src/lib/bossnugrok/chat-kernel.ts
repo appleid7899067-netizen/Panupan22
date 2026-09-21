@@ -115,23 +115,19 @@ const NAME_TO_SKILL: Record<string, SkillId> = {
 };
 
 function kernelSystem(lang: "th" | "en", extra?: string) {
-  const skills = SKILLS.map((s) => `- ${s.id}: ${s.description} (triggers: ${s.triggers.join(", ")})`).join("
-");
+  const skills = SKILLS.map((s) => `- ${s.id}: ${s.description} (triggers: ${s.triggers.join(", ")})`).join("\n");
   const base =
     lang === "th"
       ? `คุณคือผู้บัญชาการ BossnuGrok (ผู้พัฒนา: ภาณุพันธ์)
 อยู่ห้องแชทนี้ตลอด ห้ามบอกให้ผู้ใช้ไปเปิดโหมดอื่น เว้นแต่เขาพูดชัดว่า "เปิด sandbox" / "switch to terminal"
-เรียกเครื่องมือเองเมื่อต้องการข้อมูลสดหรือรันโค้ด
-เลือก Boss actions เองเมื่อจำเป็นต้องตรวจ/แก้ repository, ตรวจเว็บ, ตรวจ CI หรือบันทึกบทเรียน
+เรียกเครื่องมือเองเมื่อต้องการข้อมูลสดหรือรันโค้ด\nเลือก Boss actions เองเมื่อจำเป็นต้องตรวจ/แก้ repository, ตรวจเว็บ, ตรวจ CI หรือบันทึกบทเรียน
 ห้ามใช้ emoji ห้ามแต่ง token budget
 ตอบภาษาไทยถ้าผู้ใช้พิมพ์ไทย`
       : `You are the BossnuGrok commander (developer: Phanuphan).
 Stay in this chat room. Do not send the user to another mode unless they explicitly switch.
 Call tools yourself for live data or code.
 No emoji. Never invent a token budget.`;
-  return [base, "", "Available skills:", skills, extra?.trim() ? `
-${extra.trim()}` : ""].join("
-");
+  return [base, "", "Available skills:", skills, extra?.trim() ? `\n${extra.trim()}` : ""].join("\n");
 }
 
 async function runCode(code: string): Promise<string> {
@@ -142,12 +138,10 @@ async function runCode(code: string): Promise<string> {
     warn: (...xs: unknown[]) => logs.push(`[warn] ${xs.map(String).join(" ")}`),
   };
   try {
-    const fn = new Function("console", `"use strict";
-${code}`);
+    const fn = new Function("console", `"use strict";\n${code}`);
     const value = fn(fakeConsole);
     if (value !== undefined) logs.push(`→ ${String(value)}`);
-    return logs.join("
-") || "(no output)";
+    return logs.join("\n") || "(no output)";
   } catch (err) {
     return `❌ ${err instanceof Error ? err.message : String(err)}`;
   }
@@ -167,8 +161,13 @@ async function executeTool(
 
   if (BOSS_ACTIONS.some((action) => action.name === name)) {
     const action = await executeBossAction(name as BossActionName, args);
-    return { skillId: "daily-fixer", args, output: action.ok ? action.summary + "\
-" + JSON.stringify(action.data ?? {}, null, 2).slice(0, 7000) : "❌ " + (action.error || action.summary) };
+    return {
+      skillId: "daily-fixer",
+      args,
+      output: action.ok
+        ? action.summary + "\\n" + JSON.stringify(action.data ?? {}, null, 2).slice(0, 7000)
+        : "❌ " + (action.error || action.summary),
+    };
   }
 
   if (name === "code_runner") {
@@ -182,9 +181,7 @@ async function executeTool(
       return {
         skillId,
         args,
-        output: `🔗 ${parsed.href}
-host: ${parsed.host}
-path: ${parsed.pathname}`,
+        output: `🔗 ${parsed.href}\nhost: ${parsed.host}\npath: ${parsed.pathname}`,
       };
     } catch (err) {
       return { skillId, args, output: `❌ ${err instanceof Error ? err.message : String(err)}` };
@@ -197,8 +194,7 @@ path: ${parsed.pathname}`,
     return {
       skillId,
       args,
-      output: `📄 words≈${words}
-${text.slice(0, 800)}${text.length > 800 ? "…" : ""}`,
+      output: `📄 words≈${words}\n${text.slice(0, 800)}${text.length > 800 ? "…" : ""}`,
     };
   }
 
