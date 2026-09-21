@@ -122,7 +122,7 @@ export function ChatPanel() {
       setListening(false);
       return;
     }
-    const recognition = new SpeechRecognition();
+    const recognition: any = new SpeechRecognition();
     recognition.lang = "th-TH";
     recognition.interimResults = true;
     recognition.onstart = () => setListening(true);
