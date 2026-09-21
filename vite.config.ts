@@ -173,13 +173,13 @@ export default defineConfig(({ command, isPreview }) => ({
     ...(command === "build" || isPreview
       ? [
           nitro({
-            preset: "vercel",
+            preset: "node-server",
             // Auto-registers server/middleware/* (the PWA install page +
             // manifest + head-tag middleware). Nitro v3 defaults serverDir to
             // false, so removing this silently unwires /?install=1 on deploys.
             serverDir: "./server",
             // Keep PGlite and tslib as runtime dependencies so their native/WASM
-            // sibling assets and ESM helpers resolve from node_modules on Vercel.
+            // sibling assets and ESM helpers resolve from node_modules on Railway.
             externals: {
               external: ["@electric-sql/pglite", "tslib"],
             },

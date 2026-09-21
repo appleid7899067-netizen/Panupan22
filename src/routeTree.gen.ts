@@ -11,43 +11,127 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ApiCapabilitiesRouteImport } from './routes/api/capabilities'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiManusRouteImport } from './routes/api/manus'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiBotDiscordRouteImport } from './routes/api/bot.discord'
+import { Route as ApiBotTelegramRouteImport } from './routes/api/bot.telegram'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCapabilitiesRoute = ApiCapabilitiesRouteImport.update({
+  id: '/api/capabilities',
+  path: '/api/capabilities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiManusRoute = ApiManusRouteImport.update({
+  id: '/api/manus',
+  path: '/api/manus',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBotDiscordRoute = ApiBotDiscordRouteImport.update({
+  id: '/api/bot/discord',
+  path: '/api/bot/discord',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBotTelegramRoute = ApiBotTelegramRouteImport.update({
+  id: '/api/bot/telegram',
+  path: '/api/bot/telegram',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/api/capabilities': typeof ApiCapabilitiesRoute
+  '/api/chat': typeof ApiChatRoute
+  '/api/manus': typeof ApiManusRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/bot/discord': typeof ApiBotDiscordRoute
+  '/api/bot/telegram': typeof ApiBotTelegramRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/api/capabilities': typeof ApiCapabilitiesRoute
+  '/api/chat': typeof ApiChatRoute
+  '/api/manus': typeof ApiManusRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/bot/discord': typeof ApiBotDiscordRoute
+  '/api/bot/telegram': typeof ApiBotTelegramRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/api/capabilities': typeof ApiCapabilitiesRoute
+  '/api/chat': typeof ApiChatRoute
+  '/api/manus': typeof ApiManusRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/bot/discord': typeof ApiBotDiscordRoute
+  '/api/bot/telegram': typeof ApiBotTelegramRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/api/capabilities'
+    | '/api/chat'
+    | '/api/manus'
+    | '/api/auth/$'
+    | '/api/bot/discord'
+    | '/api/bot/telegram'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login'
-  id: '__root__' | '/' | '/login'
+  to:
+    | '/'
+    | '/login'
+    | '/api/capabilities'
+    | '/api/chat'
+    | '/api/manus'
+    | '/api/auth/$'
+    | '/api/bot/discord'
+    | '/api/bot/telegram'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/api/capabilities'
+    | '/api/chat'
+    | '/api/manus'
+    | '/api/auth/$'
+    | '/api/bot/discord'
+    | '/api/bot/telegram'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  ApiCapabilitiesRoute: typeof ApiCapabilitiesRoute
+  ApiChatRoute: typeof ApiChatRoute
+  ApiManusRoute: typeof ApiManusRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiBotDiscordRoute: typeof ApiBotDiscordRoute
+  ApiBotTelegramRoute: typeof ApiBotTelegramRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -66,12 +150,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/capabilities': {
+      id: '/api/capabilities'
+      path: '/api/capabilities'
+      fullPath: '/api/capabilities'
+      preLoaderRoute: typeof ApiCapabilitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/manus': {
+      id: '/api/manus'
+      path: '/api/manus'
+      fullPath: '/api/manus'
+      preLoaderRoute: typeof ApiManusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bot/discord': {
+      id: '/api/bot/discord'
+      path: '/api/bot/discord'
+      fullPath: '/api/bot/discord'
+      preLoaderRoute: typeof ApiBotDiscordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bot/telegram': {
+      id: '/api/bot/telegram'
+      path: '/api/bot/telegram'
+      fullPath: '/api/bot/telegram'
+      preLoaderRoute: typeof ApiBotTelegramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  ApiCapabilitiesRoute: ApiCapabilitiesRoute,
+  ApiChatRoute: ApiChatRoute,
+  ApiManusRoute: ApiManusRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiBotDiscordRoute: ApiBotDiscordRoute,
+  ApiBotTelegramRoute: ApiBotTelegramRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
