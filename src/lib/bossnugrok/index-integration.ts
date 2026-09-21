@@ -3,13 +3,13 @@
  * รวมทั้ง 7 ฟีเจอร์หลักเข้าด้วยกัน
  */
 
-import { createMistralWorkflows, MistralWorkflows } from './mistral-workflows';
-import { createAgentFactory, AgentFactory } from './agent-factory';
-import { createSandboxRuntime, SandboxRuntime } from './sandbox-runtime';
-import { createVibeWork, VibeWork } from './vibe-work';
-import { createSkillBooster, SkillBooster } from './skill-booster';
-import { createPerformanceOptimizer, PerformanceOptimizer } from './performance-optimizer';
-import { getDeploymentConfig, DeploymentConfig } from './deployment-config';
+import { createMistralWorkflows, type MistralWorkflows } from './mistral-workflows';
+import { createAgentFactory, type AgentFactory } from './agent-factory';
+import { createSandboxRuntime, type SandboxRuntime } from './sandbox-runtime';
+import { createVibeWork, type VibeWork } from './vibe-work';
+import { createSkillBooster, type SkillBooster } from './skill-booster';
+import { createPerformanceOptimizer, type PerformanceOptimizer } from './performance-optimizer';
+import { getDeploymentConfig, type DeploymentConfig } from './deployment-config';
 
 export interface BossnuGrokSystem {
   mistralWorkflows: MistralWorkflows;
@@ -164,6 +164,8 @@ console.log('2 + 3 =', sum(2, 3));
 
   // Step 6: Record skill practice
   const practice = system.skillBooster.recordPractice(agent1.id, 'tech-1', {
+    agentId: agent1.id,
+    skillId: 'tech-1',
     taskDescription: 'Review code quality',
     difficulty: 'medium',
     quality: 85,
@@ -225,19 +227,13 @@ export function cleanupBossnuGrokSystem(system: BossnuGrokSystem): void {
  */
 export {
   createMistralWorkflows,
-  MistralWorkflows,
+  createMistralWorkflows,
   createAgentFactory,
-  AgentFactory,
   createSandboxRuntime,
-  SandboxRuntime,
   createVibeWork,
-  VibeWork,
   createSkillBooster,
-  SkillBooster,
   createPerformanceOptimizer,
-  PerformanceOptimizer,
   getDeploymentConfig,
-  DeploymentConfig,
 };
 
 // Main entry point
