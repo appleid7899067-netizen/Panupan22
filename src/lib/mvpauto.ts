@@ -154,7 +154,6 @@ export async function executeMvpAutoDeepSearch(input: MvpAutoGoal) {
   return {
     ...plan,
     execution: result,
-    // Deep search is an observation phase. It must not claim the goal is complete.
     verified: false,
     evidence: result.sources.map((s) => s.url),
     verification: {
@@ -163,6 +162,81 @@ export async function executeMvpAutoDeepSearch(input: MvpAutoGoal) {
       checks: found
         ? ["multiple public sources searched", "sources collected", "goal completion still requires execution/verification"]
         : ["no usable sources found"],
+    },
+  };
+}
+
+/**
+ * Autonomous research loop.
+ * It keeps replanning while new evidence is being discovered, rather than
+ * stopping after one search. A deadline prevents a request from consuming a
+ * server worker forever; the result explicitly remains unverified until a
+ * concrete completion check exists.
+ */
+export async function executeMvpAutoAutonomous(input: MvpAutoGoal & { deadlineMs?: number }) {
+  const { deepSearch } = await import("@/lib/mvpauto-deep-search");
+  const startedAt = Date.now();
+  const deadline = startedAt + Math.max(5000, Math.min(input.deadlineMs ?? 45000, 120000));
+  const queries = new Set<string>([input.goal.trim()]);
+  const sources: Array<{ url: string; title?: string; snippet?: string; source?: string }> = [];
+  const trace: string[] = [];
+  let round = 0;
+
+  while (Date.now() < deadline && queries.size > 0) {
+    const query = queries.values().next().value as string;
+    queries.delete(query);
+    round += 1;
+    trace.push(`round ${round}: search ${query}`);
+
+    const result = await deepSearch(query);
+    for (const source of result.sources) {
+      if (!sources.some((existing) => existing.url === source.url)) sources.push(source);
+    }
+
+    const text = result.sources
+      .map((source) => [source.title, source.snippet, source.content].filter(Boolean).join(" "))
+      .join(" ")
+      .toLowerCase();
+
+    const candidates = [
+      `${input.goal} solution`,
+      `${input.goal} implementation`,
+      `${input.goal} verification`,
+    ];
+
+    if (result.sourceCount === 0) {
+      trace.push(`round ${round}: no sources, replanning`);
+      if (round < 3) candidates.push(`${input.goal} github`);
+    } else if (text.includes("error") || text.includes("issue") || text.includes("failed")) {
+      trace.push(`round ${round}: failure signals found, searching corrective evidence`);
+      candidates.push(`${input.goal} fix`, `${input.goal} troubleshooting`);
+    } else {
+      trace.push(`round ${round}: evidence collected, searching implementation/verification evidence`);
+    }
+
+    for (const candidate of candidates) {
+      if (candidate !== query && ![...queries].includes(candidate)) queries.add(candidate);
+    }
+
+    if (round >= 2 && sources.length >= 8) break;
+  }
+
+  const exhausted = Date.now() >= deadline;
+  const evidence = sources.map((source) => source.url);
+  return {
+    ...planMvpAuto(input),
+    execution: { rounds: round, sourceCount: sources.length, sources, trace, elapsedMs: Date.now() - startedAt },
+    verified: false,
+    evidence,
+    verification: {
+      phase: "executed" as const,
+      status: "pending" as const,
+      checks: [
+        `autonomous loop completed ${round} search rounds`,
+        `collected ${sources.length} unique sources`,
+        exhausted ? "deadline reached; goal still requires concrete completion evidence" : "loop stopped after sufficient evidence",
+        "research evidence is not itself proof of goal completion",
+      ],
     },
   };
 }
