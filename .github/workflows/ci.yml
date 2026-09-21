@@ -9,24 +9,46 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: panupan22-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 1
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm install --no-audit --no-fund
-      # Generate TanStack's file-based route tree before TypeScript checks.
-      - run: npm run build:dev
-      - run: npm run typecheck
-      - run: npm run lint
-      # Full regression suite, including auth/PWA/migration contracts.
-      - run: npm test
-      # Production build must include every runtime asset required by the server.
-      - run: RAILWAY_ENVIRONMENT_NAME=ci npm run build
-      # Boot the exact production artifact and require a real HTTP response.
-      - run: npm run smoke:production
+          cache-dependency-path: package-lock.json
+
+      - name: Clean generated state
+        run: node scripts/ci-clean-room.mjs
+
+      - name: Install exact lockfile
+        run: npm ci --no-audit --no-fund
+
+      - name: Generate development route tree
+        run: npm run build:dev
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      - name: Production build
+        run: RAILWAY_ENVIRONMENT_NAME=ci npm run build
+
+      - name: Production smoke test
+        run: npm run smoke:production
