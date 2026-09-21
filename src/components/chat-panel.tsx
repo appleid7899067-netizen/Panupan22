@@ -73,8 +73,38 @@ export function ChatPanel() {
           role: m.role as "user" | "assistant",
           content: m.content,
         }));
+      // MVPAUTO becomes the front-door planner for the Boss.
+      // The model still answers through Puter, but it receives the agent's
+      // current plan/search state instead of being asked to operate blind.
+      let mvpContext = "";
+      try {
+        const response = await fetch("/api/mvpauto", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ goal: trimmed, deep: true }),
+        });
+        if (response.ok) {
+          const plan = await response.json() as {
+            selected?: Array<{ provider?: string; capability?: string; reason?: string }>;
+            execution?: { sourceCount?: number };
+            verification?: { phase?: string; status?: string; checks?: string[] };
+          };
+          mvpContext = [
+            "[MVPAUTO AGENT CONTEXT]",
+            JSON.stringify(plan),
+            "[/MVPAUTO AGENT CONTEXT]",
+            "Use this as working context. Do not claim the user's goal is verified unless the verification state contains actual completion evidence.",
+          ].join("\n");
+        }
+      } catch {
+        // The chat model remains usable if the optional agent planner is unavailable.
+      }
+
+      const agentHistory = mvpContext
+        ? [{ role: "assistant" as const, content: mvpContext }, ...history]
+        : history;
       const result = await chatWithPuter({
-        messages: history,
+        messages: agentHistory,
         pinnedModel: modelMode === "auto" ? null : modelMode,
         onDelta: (next) => patchMessage(id, assistantId, { content: next, pending: true }),
       });
