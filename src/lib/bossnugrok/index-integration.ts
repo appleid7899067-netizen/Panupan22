@@ -227,7 +227,6 @@ export function cleanupBossnuGrokSystem(system: BossnuGrokSystem): void {
  */
 export {
   createMistralWorkflows,
-  createMistralWorkflows,
   createAgentFactory,
   createSandboxRuntime,
   createVibeWork,
