@@ -96,7 +96,7 @@ export function PuterLoginScreen() {
             </Button>
             {unavailable ? (
               <Button variant="secondary" className="h-10 w-full rounded-2xl" onClick={() => void retry()}>
-                {t.retry}
+                {t.retryPuter}
               </Button>
             ) : null}
             {error ? <p className="text-center text-xs text-destructive">{error}</p> : null}
