@@ -30,7 +30,7 @@ export type SkillDefinition = {
 export type SkillCall = {
   id: string;
   skillId: SkillId;
-  args: Record<string, unknown>;
+  args: Record<string, string | number | boolean | null>;
   status: SkillStatus;
   streamOutput?: string;
   result?: unknown;
