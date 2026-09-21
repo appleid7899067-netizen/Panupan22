@@ -1,4 +1,4 @@
-import type { SkillCall, SkillDefinition, SkillId, SkillResult } from "./skill-types";
+import type { SkillCall, SkillDefinition, SkillId, SkillResult, SkillJsonValue } from "./skill-types";
 import { recordError, recordSuccess, getDailyInsights, getSuccessRate, loadMemory } from "../memory/storage";
 import { fetchLiveData } from "@/lib/live-data";
 import { chatWithPuter } from "@/lib/puter-ai";
@@ -177,7 +177,7 @@ export function detectSkill(input: string): SkillDefinition | null {
   return null;
 }
 
-export function parseSkillArgs(skillId: SkillId, input: string): Record<string, unknown> {
+export function parseSkillArgs(skillId: SkillId, input: string): Record<string, SkillJsonValue> {
   if (skillId === "code-runner") {
     const match = input.match(/```(?:js|javascript|ts|typescript)?\n([\s\S]*?)```/i);
     return {
@@ -495,6 +495,7 @@ async function runTranslate(args: Record<string, unknown>, onStream?: (c: string
       ],
       pinnedModel: null,
       preferTestMode: false,
+      onDelta: () => undefined,
     });
     const out = result.text.trim();
     onStream?.(`${out}\n`);
@@ -547,6 +548,7 @@ async function runPromptLab(args: Record<string, unknown>, onStream?: (c: string
       ],
       pinnedModel: null,
       preferTestMode: false,
+      onDelta: () => undefined,
     });
     onStream?.(`${result.text}\n`);
     recordSuccess({ skillId: "prompt-lab", pattern: userPrompt.slice(0, 80) });
@@ -616,11 +618,15 @@ export async function executeSkill(
     result = { ok: false, error: message, duration: 0 };
   }
 
+  const serializableResult = result.data === undefined
+    ? undefined
+    : (JSON.parse(JSON.stringify(result.data)) as SkillJsonValue);
+
   return {
     ...call,
     status: result.ok ? "done" : "error",
     streamOutput,
-    result: result.data,
+    result: serializableResult,
     error: result.error,
     duration: result.duration,
   };

@@ -82,6 +82,7 @@ export type WorkspaceSlice = {
 };
 
 type BossState = WorkspaceSlice & {
+  systemIdentity: SystemIdentity;
   setSystemIdentity: (patch: Partial<SystemIdentity>) => void;
   resetSystemIdentity: () => void;
   hydrated: boolean;
@@ -140,7 +141,10 @@ export const useBossStore = create<BossState>()(
   persist(
     (set, get) => ({
       ...emptySlice,
+      systemIdentity: { ...DEFAULT_SYSTEM_IDENTITY },
       hydrated: false,
+      setSystemIdentity: (patch) => set((state) => ({ systemIdentity: { ...state.systemIdentity, ...patch } })),
+      resetSystemIdentity: () => set({ systemIdentity: { ...DEFAULT_SYSTEM_IDENTITY } }),
       markHydrated: () => set({ hydrated: true }),
       setLanguage: (language) => set({ language }),
       setModelMode: (modelMode) => set({ modelMode }),

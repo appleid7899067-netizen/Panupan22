@@ -19,7 +19,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
+      # Generate TanStack's file-based route tree before TypeScript checks.
+      - run: npm run build:dev
       - run: npm run typecheck
       - run: npm run lint
+      # Full regression suite, including auth/PWA/migration contracts.
       - run: npm test
+      - run: npm run build

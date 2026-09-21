@@ -42,6 +42,8 @@ export class UnauthorizedError extends Error {
   }
 }
 
+export type AppRole = "OWNER" | "CEO" | "ADMIN" | "USER";
+
 export type VerifiedUser = { id: string; email: string | null };
 
 /**

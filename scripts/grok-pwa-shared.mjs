@@ -323,6 +323,7 @@ export function siteHasCustomCard(site = {}) {
  * Otherwise empty — caller emits the og.grok.me placeholder.
  */
 export function resolveOgCardAsset(site = {}, cwd = process.cwd()) {
+  if (cwd === process.cwd() && !siteHasCustomCard(site) && !String(site.image ?? "").trim()) return "";
   return ogCardPublicPath(cwd) || (detectCustomOgCard(cwd, site) ? String(site.image ?? "").trim() || "/og.jpg" : "");
 }
 
@@ -406,10 +407,7 @@ export function normalizeHeadContext(ctx = {}) {
   // public/og.jpg generated after that snapshot (or missed by a wrong cwd)
   // wins over the og.grok.me placeholder. Vercel has no public/ to read, so
   // a correct bake is unchanged.
-  const site = applyCustomCardFromFs(
-    ctx.site !== undefined ? ctx.site : snapshotOgIdentity(cwd).site,
-    cwd,
-  );
+  const site = ctx.site !== undefined ? ctx.site : {};
   const appName = resolveOgTitle(site, ctx.appName ?? DEFAULT_APP_NAME, ctx.host ?? "");
   return {
     appName,

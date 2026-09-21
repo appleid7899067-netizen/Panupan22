@@ -27,13 +27,15 @@ export type SkillDefinition = {
   triggers: string[];
 };
 
+export type SkillJsonValue = string | number | boolean | null | SkillJsonValue[] | { [key: string]: SkillJsonValue };
+
 export type SkillCall = {
   id: string;
   skillId: SkillId;
-  args: Record<string, unknown>;
+  args: Record<string, SkillJsonValue>;
   status: SkillStatus;
   streamOutput?: string;
-  result?: unknown;
+  result?: SkillJsonValue;
   error?: string;
   duration?: number;
 };

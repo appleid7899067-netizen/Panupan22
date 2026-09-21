@@ -140,7 +140,7 @@ export function CommandCenter() {
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-background">
-      <div className="flex items-center justify-between gap-3 border-b border-border bg-card/40 px-3 py-1.5 text-[10px] sm:px-4">
+      <div className="hidden">
         <div className="flex min-w-0 items-center gap-3">
           <span className="inline-flex items-center gap-1.5 font-semibold tracking-wider text-lime-300">
             <span className="relative flex size-1.5">
@@ -188,7 +188,7 @@ export function CommandCenter() {
         </div>
       </div>
 
-      <header className="flex items-center gap-2 border-b border-border px-3 py-2 sm:px-4">
+      <header className="hidden">
         <AppMark className="size-8 shrink-0 text-brand" />
         <div className="min-w-0 flex-1">
           <p className="font-display text-lg leading-none tracking-tight">
@@ -290,7 +290,7 @@ export function CommandCenter() {
         </div>
       </header>
 
-      <div className="flex gap-1.5 overflow-x-auto border-b border-border px-3 py-2 sm:hidden">
+      <div className="hidden">
         {MODES.map((m) => {
           const active = workspaceMode === m.id;
           return (
@@ -313,15 +313,17 @@ export function CommandCenter() {
       </div>
 
       <div className="flex min-h-0 flex-1">
-        <CommanderRail
-          activeMode={workspaceMode}
-          onMode={setWorkspaceMode}
-          onAgents={() => setAgentsOpen(true)}
-          onForge={() => setForgeOpen(true)}
-          language={language}
-        />
+        <div className="hidden">
+          <CommanderRail
+            activeMode={workspaceMode}
+            onMode={setWorkspaceMode}
+            onAgents={() => setAgentsOpen(true)}
+            onForge={() => setForgeOpen(true)}
+            language={language}
+          />
+        </div>
         <div className="grid min-w-0 min-h-0 flex-1 grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_300px]">
-        <aside className="hidden min-h-0 border-r border-border lg:block">
+        <aside className="hidden">
           <div className="flex h-full flex-col">
             <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-subtle">
@@ -362,7 +364,7 @@ export function CommandCenter() {
           </div>
         </main>
 
-        <aside className="hidden min-h-0 border-l border-border xl:block">
+        <aside className="hidden">
           <div className="flex h-full flex-col">
             <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-subtle">
@@ -378,7 +380,7 @@ export function CommandCenter() {
         </div>
       </div>
 
-      <p className="hidden border-t border-border px-4 py-1.5 text-center text-[10px] tracking-wide text-subtle sm:block" suppressHydrationWarning>
+      <p className="hidden" suppressHydrationWarning>
         {APP_SHORT_NAME} · {APP_DEVELOPER} · Real-time
         {mounted && autoOn ? " · AUTO" : ""}
       </p>

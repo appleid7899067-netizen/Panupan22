@@ -25,6 +25,8 @@ export type KernelMessage = {
   tool_calls?: GrokToolCall[];
 };
 
+type ToolArgs = Record<string, string | number | boolean | null>;
+
 export type KernelResult =
   | { ok: true; text: string; model: string; skillCalls: SkillCall[] }
   | { ok: false; error: string; skillCalls: SkillCall[] };
@@ -150,14 +152,25 @@ async function runCode(code: string): Promise<string> {
 async function executeTool(
   name: string,
   rawArgs: string,
-): Promise<{ skillId: SkillId; output: string; args: Record<string, unknown> }> {
-  let args: Record<string, unknown> = {};
+): Promise<{ skillId: SkillId; output: string; args: ToolArgs }> {
+  let args: ToolArgs = {};
   try {
-    args = rawArgs ? (JSON.parse(rawArgs) as Record<string, unknown>) : {};
+    args = rawArgs ? (JSON.parse(rawArgs) as ToolArgs) : {};
   } catch {
     args = { raw: rawArgs };
   }
-  const skillId = NAME_TO_SKILL[name] ?? "web-search";\n\n  if (BOSS_ACTIONS.some((action) => action.name === name)) {\n    const action = await executeBossAction(name as BossActionName, args);\n    return { skillId: "daily-fixer", args, output: action.ok ? action.summary + "\\n" + JSON.stringify(action.data ?? {}, null, 2).slice(0, 7000) : "❌ " + (action.error || action.summary) };\n  }
+  const skillId = NAME_TO_SKILL[name] ?? "web-search";
+
+  if (BOSS_ACTIONS.some((action) => action.name === name)) {
+    const action = await executeBossAction(name as BossActionName, args);
+    return {
+      skillId: "daily-fixer",
+      args,
+      output: action.ok
+        ? action.summary + "\\n" + JSON.stringify(action.data ?? {}, null, 2).slice(0, 7000)
+        : "❌ " + (action.error || action.summary),
+    };
+  }
 
   if (name === "code_runner") {
     const code = String(args.code ?? "").trim();

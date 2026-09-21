@@ -96,18 +96,20 @@ export function BotFlowVisualizer() {
           ) : (
             <>
               <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {[
-                  [th ? "ขั้นตอน" : "Steps", steps.length, Target],
-                  [th ? "เสร็จ" : "Done", counts.done, Check],
-                  [th ? "กำลังทำงาน" : "Running", counts.running, Loader2],
-                  [th ? "ผิดพลาด" : "Errors", counts.error, X],
-                ].map(([label, value, Icon]) => (
+                {(
+                  [
+                    { label: th ? "ขั้นตอน" : "Steps", value: steps.length, Icon: Target },
+                    { label: th ? "เสร็จ" : "Done", value: counts.done, Icon: Check },
+                    { label: th ? "กำลังทำงาน" : "Running", value: counts.running, Icon: Loader2 },
+                    { label: th ? "ผิดพลาด" : "Errors", value: counts.error, Icon: X },
+                  ] as const
+                ).map(({ label, value, Icon }) => (
                   <div key={String(label)} className="rounded-xl border border-border bg-card/50 p-3">
                     <div className="flex items-center justify-between text-[10px] text-subtle">
-                      <span>{label as string}</span>
+                      <span>{label}</span>
                       <Icon className="size-3" />
                     </div>
-                    <p className="mt-1 text-lg font-semibold">{value as number}</p>
+                    <p className="mt-1 text-lg font-semibold">{value}</p>
                   </div>
                 ))}
               </div>

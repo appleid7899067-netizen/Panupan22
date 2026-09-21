@@ -14,7 +14,7 @@
     "preview": "node scripts/with-app-env.mjs vite preview",
     "preview:restart": "node scripts/preview.mjs restart",
     "preview:stop": "node scripts/preview.mjs stop",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "npm run build:dev && tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
     "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts",
     "lint": "eslint .",
@@ -73,7 +73,9 @@
     "zod": "^4.4.0",
     "zustand": "^5.0.0",
     "tslib": "^2.8.1",
-    "@assistant-ui/react": "^0.15.21"
+    "@assistant-ui/react": "^0.15.21",
+    "axios": "^1.8.4",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
