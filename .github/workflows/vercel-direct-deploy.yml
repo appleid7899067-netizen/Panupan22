@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: panupan22-production
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -17,12 +21,26 @@ jobs:
       VERCEL_PROJECT_ID: prj_Cq77AnpC2BomLXeNaZjrU5diZ8Wv
     steps:
       - uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 1
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm install --no-audit --no-fund
-      - run: npm run build
+          cache-dependency-path: package-lock.json
+
+      - name: Clean generated state
+        run: node scripts/ci-clean-room.mjs
+
+      - name: Verify lockfile
+        run: npm ci --no-audit --no-fund
+
+      - name: Build from clean state
+        run: npm run build
         env:
           RAILWAY_ENVIRONMENT_NAME: production
-      - run: npx vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
+
+      - name: Deploy verified build
+        run: npx vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
