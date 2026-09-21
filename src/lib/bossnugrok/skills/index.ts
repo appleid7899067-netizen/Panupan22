@@ -495,6 +495,7 @@ async function runTranslate(args: Record<string, unknown>, onStream?: (c: string
       ],
       pinnedModel: null,
       preferTestMode: false,
+      onDelta: () => undefined,
     });
     const out = result.text.trim();
     onStream?.(`${out}\n`);
