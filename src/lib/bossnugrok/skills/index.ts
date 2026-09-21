@@ -177,7 +177,7 @@ export function detectSkill(input: string): SkillDefinition | null {
   return null;
 }
 
-export function parseSkillArgs(skillId: SkillId, input: string): Record<string, unknown> {
+export function parseSkillArgs(skillId: SkillId, input: string): Record<string, SkillJsonValue> {
   if (skillId === "code-runner") {
     const match = input.match(/```(?:js|javascript|ts|typescript)?\n([\s\S]*?)```/i);
     return {
