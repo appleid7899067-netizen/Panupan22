@@ -1,0 +1,5 @@
+{
+  "install": "npm install",
+  "build": "npm run build",
+  "deploy": "node .output/server/index.mjs"
+}
