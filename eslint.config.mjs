@@ -40,6 +40,11 @@ export default tseslint.config(
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/no-explicit-any": "off",
+      "no-empty": "warn",
+      "prefer-const": "warn",
+      "no-useless-escape": "warn",
+      "no-misleading-character-class": "warn",
+      "@typescript-eslint/no-require-imports": "warn",
     },
   },
   // Disable rules that conflict with Prettier formatting.
