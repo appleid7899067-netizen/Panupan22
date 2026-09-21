@@ -25,12 +25,9 @@ export type KernelMessage = {
   tool_calls?: GrokToolCall[];
 };
 
-type SerializableToolArgs = Record<string, string | number | boolean | null>;
-type SerializableSkillCall = Omit<SkillCall, "args" | "result"> & { args: SerializableToolArgs };
-
 export type KernelResult =
-  | { ok: true; text: string; model: string; skillCalls: SerializableSkillCall[] }
-  | { ok: false; error: string; skillCalls: SerializableSkillCall[] };
+  | { ok: true; text: string; model: string; skillCalls: SkillCall[] }
+  | { ok: false; error: string; skillCalls: SkillCall[] };
 
 const BOSS_ACTION_TOOL_DEFS = BOSS_ACTIONS.map((action) => ({
   type: "function" as const,
@@ -279,14 +276,7 @@ export async function runChatTurn(input: {
         skillCalls.push({
           id: call.id,
           skillId: ran.skillId,
-          args: Object.fromEntries(
-            Object.entries(ran.args).map(([key, value]) => [
-              key,
-              typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null
-                ? value
-                : JSON.stringify(value),
-            ]),
-          ),
+          args: ran.args,
           status: ran.output.startsWith("❌") ? "error" : "done",
           streamOutput: ran.output,
           duration: Date.now() - started,
