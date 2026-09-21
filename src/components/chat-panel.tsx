@@ -81,7 +81,7 @@ export function ChatPanel() {
         const response = await fetch("/api/mvpauto", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ goal: trimmed, deep: true }),
+          body: JSON.stringify({ goal: trimmed, autonomous: true, deadlineMs: 45000 }),
         });
         if (response.ok) {
           const plan = await response.json() as {
