@@ -9,3 +9,11 @@ export async function executeMvpAutoSearch(input: MvpAutoGoal & { start?: number
   const result = await searchGoogle(input.goal, input.start ?? 1);
   return { ...plan, execution: result, verified: result.ok && result.items.length > 0, evidence: result.ok ? result.items.map((item) => item.link) : [result.error ?? "google-search-failed"] };
 }
+
+
+export async function executeMvpAutoDeepSearch(input: MvpAutoGoal) {
+  const plan = planMvpAuto({ ...input, preferredProvider: "google" });
+  const { deepSearch } = await import("@/lib/mvpauto-deep-search");
+  const result = await deepSearch(input.goal);
+  return { ...plan, execution: result, verified: result.sourceCount > 0, evidence: result.sources.map((s) => s.url) };
+}
