@@ -548,6 +548,7 @@ async function runPromptLab(args: Record<string, unknown>, onStream?: (c: string
       ],
       pinnedModel: null,
       preferTestMode: false,
+      onDelta: () => undefined,
     });
     onStream?.(`${result.text}\n`);
     recordSuccess({ skillId: "prompt-lab", pattern: userPrompt.slice(0, 80) });
