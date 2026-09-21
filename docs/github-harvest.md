@@ -17,5 +17,5 @@ Only compatible original implementations are placed into Panupan22. AGPL code is
 
 Snapshot checked September 22, 2026. Star counts change continuously.
 
-
 <!-- CI verification checkpoint: autonomous MVPAUTO -->
+<!-- Vercel deployment checkpoint: redeploy current main after agent hardening -->
