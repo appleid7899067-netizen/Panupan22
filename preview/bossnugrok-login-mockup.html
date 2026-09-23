@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BossnuGrok — Login Preview</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#050505;color:#f5f5f5}body{display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 25%,#171717 0,#090909 42%,#050505 75%)}
+    .shell{width:min(100%,440px);padding:34px 30px 28px;border:1px solid #242424;border-radius:24px;background:rgba(12,12,12,.94);box-shadow:0 24px 80px rgba(0,0,0,.55)}
+    .brand{text-align:center;margin-bottom:30px}.mark{width:48px;height:48px;margin:0 auto 16px;border:1px solid #333;border-radius:15px;display:grid;place-items:center;font-size:22px;font-weight:800;background:#111}.brand h1{margin:0;font-size:28px;letter-spacing:-.7px}.brand p{margin:8px 0 0;color:#8d8d8d;font-size:14px}
+    label{display:block;margin:0 0 8px;font-size:13px;color:#b9b9b9}.field{width:100%;height:50px;padding:0 15px;border:1px solid #303030;border-radius:13px;background:#0b0b0b;color:#fff;outline:0;font-size:15px;margin-bottom:16px}.field:focus{border-color:#666;box-shadow:0 0 0 3px rgba(255,255,255,.06)}
+    .row{display:flex;justify-content:space-between;align-items:center;margin:2px 0 20px;font-size:13px;color:#858585}.check{display:flex;gap:8px;align-items:center}.check input{accent-color:#fff}.link{color:#d5d5d5;text-decoration:none}.btn{width:100%;height:50px;border:0;border-radius:13px;background:#f5f5f5;color:#050505;font-size:15px;font-weight:750;cursor:pointer}.btn:hover{background:#fff}.divider{display:flex;align-items:center;gap:12px;color:#555;font-size:12px;margin:24px 0}.divider:before,.divider:after{content:"";height:1px;background:#252525;flex:1}.secondary{width:100%;height:48px;border:1px solid #303030;border-radius:13px;background:#101010;color:#eee;font-weight:650;cursor:pointer}.foot{text-align:center;margin-top:22px;color:#666;font-size:12px}.status{margin-top:14px;min-height:18px;text-align:center;color:#8d8d8d;font-size:12px}
+    @media(max-width:480px){body{padding:12px}.shell{padding:28px 20px 22px;border-radius:20px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="brand">
+      <div class="mark">B</div>
+      <h1>BossnuGrok</h1>
+      <p>Sign in to your AI workspace</p>
+    </section>
+
+    <form id="loginForm">
+      <label for="email">Email</label>
+      <input class="field" id="email" type="email" placeholder="you@example.com" autocomplete="email" required>
+      <label for="password">Password</label>
+      <input class="field" id="password" type="password" placeholder="••••••••" autocomplete="current-password" required>
+      <div class="row"><label class="check"><input type="checkbox" id="remember"> Remember me</label><a class="link" href="#" onclick="return false">Forgot password?</a></div>
+      <button class="btn" type="submit">Sign in</button>
+    </form>
+
+    <div class="divider">or</div>
+    <button class="secondary" type="button" id="demoBtn">Preview demo</button>
+    <div class="status" id="status"></div>
+    <div class="foot">BossnuGrok • Login UI Preview • HTML only</div>
+  </main>
+
+  <script>
+    const form=document.getElementById('loginForm');
+    const status=document.getElementById('status');
+    form.addEventListener('submit',e=>{e.preventDefault();status.textContent='Preview only — authentication is not connected.'});
+    document.getElementById('demoBtn').addEventListener('click',()=>{status.textContent='Demo mode ready — no real login was performed.'});
+  </script>
+</body>
+</html>
